@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Engine.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Engine.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*!
+ * trek - Engine
+ * Copyright(c) 2015 Fangdun Cai
+ * MIT Licensed
+ */
+
+import { basename, dirname, join } from &apos;path&apos;
+import serveStatic from &apos;koa-static&apos;
+import chalk from &apos;chalk&apos;
+import co from &apos;co&apos;
+import composition from &apos;composition&apos;
+import Koa from &apos;koa&apos;
+import Router from &apos;trek-router&apos;
+import RouteMapper from &apos;route-mapper&apos;
+import Config from &apos;./Config&apos;
+import Context from &apos;./Context&apos;
+import View from &apos;./View&apos;
+
+const METHODS = Router.METHODS
+
+/**
+ * The Trek Engine Core
+ * @extends Koa
+ */
+export default class Engine extends Koa {
+
+  /**
+   * @param {String} rootPath The app root path.
+   */
+  constructor(rootPath) {
+    super()
+    this.initialized = false
+    this.env = Trek.env
+    if (rootPath) this.rootPath = rootPath
+    this.initialize()
+  }
+
+  /**
+   * @private
+   */
+  initialize() {
+    // top-most app is mounted at /
+    this.mountpath = &apos;/&apos;
+    this.config = new Config(this.rootPath)
+    this.router = new Router()
+    // override context
+    this.context = new Context()
+    this.engines = new Map()
+    this.cache = Object.create(null)
+    this.state = Object.create(null)
+    this.state.config = this.config
+  }
+
+  /**
+   * Stores the `value` with `key` into `app.config`
+   *
+   * @returns {Engine} this
+   */
+  set(key, value) {
+    this.config.set(key, value)
+    return this;
+  }
+
+  /**
+   * Get the app prefix path
+   *
+   * @returns {String}
+   */
+  get path() {
+    return this.parent
+      ? this.parent.path + this.mountpath
+      : &apos;&apos;
+  }
+
+  /**
+   * Set a working `rootPath` directory for app
+   *
+   * @param {String} root path
+   */
+  set rootPath(rootPath) {
+    this._rootPath = rootPath
+  }
+
+  /**
+   * The app working `rootPath` directory
+   *
+   * @returns {String}
+   */
+  get rootPath() {
+    return this._rootPath || (this._rootPath = dirname(require.main.filename))
+  }
+
+  /**
+   * The `config.paths` delegation
+   *
+   * @returns {Paths} config.paths
+   */
+  get paths() {
+    return this.config.paths
+  }
+
+  /**
+   * The app `logger`
+   *
+   * @return {winston.Logger}
+   */
+  get logger() {
+    return this._logger || (this._logger = Object.create(Trek.logger))
+  }
+
+  /**
+   * Get all servides
+   *
+   * @return {Map} services
+   */
+  get services() {
+    return this._services || (this._services = new Map())
+  }
+
+  /**
+   * Get a service by key
+   *
+   * @param {String} key
+   * @return {Mixed} service
+   */
+  getService(key) {
+    return this.services.get(key)
+  }
+
+  /**
+   * Stores a service
+   *
+   * @param {String} key the service name
+   * @param {Mixed} service the service instance
+   * @returns {void}
+   */
+  setService(key, value) {
+    if (this.services.has(key)) {
+      this.logger.warn(chalk.green(`service:${key} was registed`))
+      return
+    }
+    this.logger.debug(chalk.yellow(&apos;service:%s&apos;), key)
+    this.services.set(key, value)
+  }
+
+  /**
+   * Get route mapper.
+   *
+   * @return {RouteMapper} routeMapper
+   */
+  get routeMapper() {
+    return this._routeMapper || (this._routeMapper = new RouteMapper())
+  }
+
+  /**
+   * @private
+   */
+  loadRoutes() {
+    this.logger.debug(`Start load the routes.`)
+    let routesPath = this.paths.get(&apos;config/routes&apos;, true)
+    let controllersPath = this.paths.get(&apos;app/controllers&apos;, true)
+    try {
+      //require(routesPath).call(this.routeMapper, this.routeMapper)
+      this.routeMapper.draw(routesPath)
+      this.routeMapper.routes.forEach(r =&gt; {
+        let { controller, action } = r
+        let path = join(controllersPath, controller) + &apos;.js&apos;
+        let c = require(path)
+        r.verb.forEach((m) =&gt; {
+          let a
+          if (c &amp;&amp; (a = c[action])) {
+            if (!Array.isArray(a)) a = [a]
+            this.logger.debug(m, r.as, r.path, controller, action)
+            this[m](r.path, ...a)
+          }
+        });
+      });
+    } catch (e) {
+      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)
+    }
+  }
+
+  /**
+   * Load default middleware stack
+   *
+   * @private
+   */
+  defaultMiddlewareStack() {
+    let stackPath = this.paths.get(&apos;config/middleware&apos;, true)
+    let existed = !!stackPath
+    let loaded = false
+    let err
+    if (existed) {
+      try {
+        require(stackPath)(this)
+        loaded = true
+      } catch (e) {
+        err = e
+      }
+    }
+    if (!loaded) {
+      stackPath = stackPath || this.paths.getPattern(&apos;config/middleware&apos;)
+      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || &apos;&apos;)}.`)
+    }
+  }
+
+  /**
+   * Boot the app
+   *
+   * @returns {void}
+   */
+  *bootstrap() {
+    if (this.isBooted) return
+    yield this.config.load()
+    yield this.loadServices()
+    this.defaultMiddlewareStack()
+    this.loadRoutes()
+    this.use(function* dispatcher(next) {
+      let [handler, params] = this.app.router.find(this.method, this.path)
+      if (handler) {
+        params.forEach((i) =&gt; {
+          this.params[i.name] = i.value
+        });
+        let body = yield handler.call(this, next)
+        if (body) {
+          this.body = body
+          return;
+        }
+      }
+      yield next
+    })
+    this.isBooted = true
+
+    return this
+  }
+
+  /**
+   * Register the given template engine callback `fn` * as `ext`.
+   *
+   * @param {String} ext
+   * @param {GeneratorFunction} fn
+   * @returns {Engine} this
+   */
+  engine(ext, fn) {
+    if (!fn) {
+      throw new Error(&apos;GeneratorFunction or Function required&apos;)
+    }
+
+    // get file extension
+    var extension = ext[0] !== &apos;.&apos;
+      ? &apos;.&apos; + ext
+      : ext
+
+    // store engine
+    this.engines.set(extension, fn)
+
+    return this
+  }
+
+  /**
+   * Render `view` with the given `options`
+   *
+   * @example
+   *  yield app.render(&apos;site&apos;, { name: &apos;trek&apos; })
+   *
+   * @param {String} view The name of view
+   * @param {Object} options
+   * @param {Boolean} options.cache Boolean hinting to the engine it should cache
+   * @param {String} options.filename Filename of the view being rendered
+   * @returns {String}
+   */
+  *render(name, options = Object.create(null)) {
+    var renderOptions = Object.create(null)
+    var view
+
+    // merge app.state
+    Object.assign(renderOptions, this.state)
+
+    // merge options._state
+    if (options._state) {
+      Object.assign(renderOptions, options._state)
+    }
+
+    // merge options
+    Object.assign(renderOptions, options)
+
+    // set .cache unless explicitly provided
+    if (renderOptions.cache == null) {
+      renderOptions.cache = this.config.get(&apos;view.cache&apos;)
+    }
+
+    // primed cache
+    if (renderOptions.cache) {
+      view = this.cache[name]
+    }
+
+    if (!view) {
+      view = new View(name, Object.create({
+        defaultEngine: this.config.get(&apos;view.engine&apos;, &apos;html&apos;),
+        root: this.paths.get(&apos;app/views&apos;, true),
+        engines: this.engines
+      }))
+
+      yield view.fetchPath()
+
+      if (!view.path) {
+        var dirs = Array.isArray(view.root) &amp;&amp; view.root.length &gt; 1
+          ? &apos;directories &quot;&apos; + view.root.slice(0, -1).join(&apos;&quot;, &quot;&apos;) + &apos;&quot; or &quot;&apos; + view.root[view.root.length - 1] + &apos;&quot;&apos;
+          : &apos;directory &quot;&apos; + view.root + &apos;&quot;&apos;
+        var err = new Error(&apos;Failed to lookup view &quot;&apos; + name + &apos;&quot; in views &apos; + dirs)
+        err.view = view
+        throw err
+      }
+
+      if (renderOptions.cache) {
+        this.cache[name] = view
+      }
+    }
+
+    // render
+    return yield view.render(renderOptions)
+  }
+
+  /**
+   * Load services
+   * @returns {void}
+   */
+  *loadServices() {
+    let files = this.paths.get(&apos;app/services&apos;)
+    let seq = []
+    for (let file of files) {
+      let name = basename(file, &apos;.js&apos;).replace(/^[0-9]+-/, &apos;&apos;)
+      let service = require(`${this.rootPath}/${file}`)(this, this.config)
+      if (service) {
+        this.setService(name, service)
+        this.logger.debug(chalk.green(`service:${name} init ...`))
+        if (service.promise) yield service.promise
+        this.logger.debug(chalk.green(`service:${name} booted`))
+      }
+    }
+  }
+
+  /**
+   * Serves a file
+   *
+   * @param {String} path
+   * @param {String} file
+   * @param {Object} options
+   * @returns {Engine} this
+   */
+  serveFile(path, file, options) {
+    var dir = dirname(file)
+    return this.get(path, serveStatic(dir, options))
+  }
+
+  /**
+   * Serves files from a directory
+   *
+   * @param {String} path
+   * @param {String} dir
+   * @param {Object} options
+   * @returns {Engine} this
+   */
+  serveDir(path, dir, options) {
+    dir = dirname(dir)
+    return this.get(path + &apos;*&apos;, serveStatic(dir, options))
+  }
+
+  /**
+   * Serves static files from a directory. It&apos;s an alias for `app#serveDir`
+   *
+   * @param {String} path
+   * @param {String} dir
+   * @param {Object} options
+   * @returns {Engine} this
+   */
+  static(path, dir, options) {
+    return this.serveDir(path, dir, options)
+  }
+
+  /**
+   * Serves the default favicon - GET /favicon.ico
+   *
+   * @param {String} file
+   * @returns {Engine} this
+   */
+  favicon(file) {
+    return this.serveFile(&apos;/favicon.ico&apos;, file)
+  }
+
+  /**
+   * Index serves index file
+   *
+   * @param {String} file
+   * @param {Object} options
+   * @returns {Engine} this
+   */
+  index(file, options) {
+    return this.serveFile(&apos;/&apos;, file, options)
+  }
+
+  /**
+   * Run the app
+   *
+   * @param {Mixed} args
+   * @returns {Promise}
+   */
+  run(...args) {
+    this.logger.debug(chalk.green(&apos;booting ...&apos;))
+    return co.call(this, function* () {
+      yield this.bootstrap()
+      // TODO: https
+      if (!args[0]) args[0] = this.config.get(&apos;site.port&apos;)
+      this.server = this.listen(...args)
+      let address = this.server.address()
+      this.logger.info(
+        chalk.green(&apos;The application starting in %s on http://%s:%s&apos;),
+        Trek.env,
+        address.address === &apos;::&apos; ? &apos;127.0.0.1&apos; : address.address,
+        address.port
+      )
+    }).catch((e) =&gt; {
+      this.logger.error(chalk.bold.red(`${e.stack}`))
+      this.logger.error(chalk.red(&apos;boots failed.&apos;))
+    })
+  }
+
+  /**
+   * Match adds a route &gt; handler to the router for multiple HTTP methods provided
+   *
+   * @param {String[]} methods
+   * @param {String} path
+   * @param {GeneratorFunction[]} handler
+   * @returns {Engine} this
+   */
+  match(methods = [], path, ...handler) {
+    methods.forEach((m) =&gt; {
+      if (METHODS.includes(m)) {
+        let v = m.replace(&apos;-&apos;, &apos;&apos;)
+        this[v](path, ...handler)
+      }
+    })
+    return this
+  }
+
+  /**
+   * Special-cased &quot;all&quot; method, applying the given route `path`,
+   * middleware, and handler to _every_ HTTP method.
+   *
+   * @param {String} path
+   * @param {GeneratorFunction[]} handler
+   * @returns {Engine} this
+   */
+  all(path, ...handler) {
+    return this.match(METHODS, path, ...handler)
+  }
+
+}
+
+METHODS
+  .forEach((m) =&gt; {
+    let v = m.replace(&apos;-&apos;, &apos;&apos;)
+    Engine.prototype[v] = eval(`(function (c) {
+      return (function $${v}(path) {
+        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key &lt; _len; _key++) {
+          handlers[_key] = arguments[_key + 1]
+        }
+        handlers = c(handlers)
+        this.router.add(m.toUpperCase(), path, handlers)
+        return this
+      });
+    })`)(composition)
+  })
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

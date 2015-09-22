@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Config.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Config.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*!
+ * trek - Config
+ * Copyright(c) 2015 Fangdun Cai
+ * MIT Licensed
+ */
+
+import { extname} from &apos;path&apos;
+import { readFile } from &apos;mz/fs&apos;
+import { Env, Memory } from &apos;nconf&apos;
+import chalk from &apos;chalk&apos;
+import dotenv from &apos;dotenv&apos;
+import templatly from &apos;templatly&apos;
+import Paths from &apos;./Paths&apos;
+import Parsers from &apos;./Parsers&apos;
+
+/**
+ * The app&apos;s configuration
+ */
+export default class Config {
+
+  /**
+   * @param {String} root The app&apos;s root path
+   * @param {String} [separator=&apos;.&apos;] The keypath separator
+   */
+  constructor(root, separator = &apos;.&apos;) {
+    this.root = root
+    this.separator = separator
+    this.initialize()
+  }
+
+  /**
+   * @private
+   */
+  initialize() {
+    this.parsers = Parsers
+    this.paths = new Paths(this.root)
+    // init stores
+    this.stores = new Map()
+    // init list
+    this.list = [
+      // key, namespace, init store, enable/disable namespace, env
+      [&apos;config/database&apos;, &apos;database&apos;, null, true, Trek.env],
+      [&apos;config/secrets&apos;, &apos;secrets&apos;, null, true, Trek.env],
+      [&apos;config/app.env&apos;, &apos;user&apos;], // app.${Trek.env}
+      [&apos;config/app&apos;, &apos;global&apos;],
+      [&apos;config/.env&apos;, &apos;env&apos;, new Env()], // .env.${Trek.env}
+    ]
+  }
+
+  /**
+   * Load dotenv `.env.{development|test|production}`
+   *
+   * @returns {void}
+   */
+  dotenv() {
+    let env = this.paths.get(&apos;config/.env&apos;) // .env.${Trek.env}
+    let existed = !!env
+    let loaded = false
+    if (existed) {
+      loaded = dotenv.config({
+        path: `${this.root}/${env}`,
+        silent: true
+      })
+    }
+    env = env || this.paths.getPattern(&apos;config/.env&apos;)
+    if (loaded) Trek.logger.debug(&apos;Loaded environment variables from %s to %s.&apos;, chalk.green(env), chalk.gray(&apos;process.env&apos;))
+    else Trek.logger.warn(&apos;Missing %s dotenv file or parse failed.&apos;, chalk.red(env))
+  }
+
+  /**
+   * Load app.toml app.{development|test|production}.toml
+   *
+   * @returns {void}
+   */
+  *loadList() {
+    let tmp = []
+
+    for (let item of this.list) {
+      let [k, t, nc, n, e] = item
+      let p = this.paths.get(k)
+      let [existed, loaded, err] = [!!(p || nc), true, null]
+      if (existed) {
+        try {
+          let s = nc || (yield this.compile(`${this.root}/${p}`, n ? t : null, e))
+          this.stores.set(t, s)
+        } catch (e) {
+          err = e
+          loaded = false
+        }
+      }
+      tmp.unshift({
+        pattern: this.paths.getPattern(k),
+        filename: p,
+        loaded: existed &amp; loaded,
+        error: err,
+        namespace: t
+      })
+    }
+
+    for (let [k, s] of this.stores.entries()) {
+      s.loadSync()
+    }
+
+    tmp.forEach((e) =&gt; {
+      let {
+        pattern, filename, loaded, error, namespace
+      } = e
+      filename = (namespace === &apos;env&apos; ? &apos;process.env&apos;: filename) || pattern
+      if (loaded) Trek.logger.debug(&apos;Loaded %s.&apos;, chalk.green(filename))
+      else Trek.logger.warn(&apos;Missing %s or parse failed, %s.&apos;, chalk.red(filename), chalk.red(error))
+    })
+  }
+
+  /**
+   * Load dotenv and app config files
+   *
+   * @returns {void}
+   */
+  *load() {
+    // first, load dotenv
+    this.dotenv()
+    // second, load list
+    yield this.loadList()
+  }
+
+  /**
+   * Use templatly to render thie file, then parse file to Memory
+   *
+   * @param {String} filename The file path
+   * @param {String} namespace Set a namespace for current store
+   * @param {String} env
+   * @returns {nconf.Memory}
+   */
+  *compile(filename, namespace, env) {
+    let content = yield this.render(filename)
+    let data = this.parse(content, filename)
+    let memory = new Memory({
+      logicalSeparator: this.separator
+    })
+    // select env
+    if (env) {
+      data = data[env] || data
+    }
+    // add namespace for data
+    if (namespace) {
+      data = {
+        [namespace]: data
+      }
+    }
+    memory.store = data || Object.create(null)
+    return memory
+  }
+
+  /**
+   * First, uses native `template-strings` for rendering configuration file
+   *
+   * @returns {String} The rendered template strings
+   */
+  *render(filename, locals = Object.create(null)) {
+    let content = yield readFile(filename, &apos;utf-8&apos;)
+    Object.assign(locals, {
+      env: process.env,
+      config: this
+    })
+    return templatly(content, locals)
+  }
+
+  /**
+   * Parse the file from `.js`, `.json`, `.toml`, `.yml`
+   *
+   * @param {String} content The file raw content
+   * @param {String} filename The file path
+   * @returns {nconf.Memory}
+   */
+  parse(content, filename) {
+    let ext = extname(filename).substring(1)
+    // parser
+    let p = this.parsers[ext]
+    if (!p) return Object.create(null)
+    return p.parse(content, filename)
+  }
+
+  /**
+   * Get value by key from Config
+   *
+   *  search: env -&gt; user -&gt; global
+   *
+   * @param {String} key
+   * @param {Mixed} [defaultValue]
+   * @returns {Mixed}
+   */
+  get(key, defaultValue) {
+    let value
+    for (let s of this.stores.values()) {
+      value = s.get(key)
+      if (value) return value
+    }
+    return defaultValue
+  }
+
+  /**
+   * Set value by key onto Config
+   *
+   * @param {String} key
+   * @param {Mixed} value
+   * @param {String} [type=&apos;user&apos;] The namespace
+   * @returns {void}
+   */
+  set(key, value, type = &apos;user&apos;) {
+    if (this.stores.has(type)) {
+      this.stores.get(type).set(key, value)
+    }
+  }
+
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

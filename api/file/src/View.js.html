@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/View.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/View.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*!
+ * trek - View
+ * Copyright(c) 2015 Fangdun Cai
+ * MIT Licensed
+ */
+
+import fs from &apos;mz/fs&apos;
+import _debug from &apos;debug&apos;
+import { dirname, basename, extname, join, resolve } from &apos;path&apos;
+
+const debug = _debug(&apos;trek:view&apos;)
+
+/**
+ * Initialize a new `View` with the given `name`
+ */
+export default class View {
+
+  /**
+   * @param {String} name
+   * @param {Object} options
+   * @param {String} options.defaultEngine The default template engine name
+   * @param {Object} options.engines Template engine require() cache
+   * @param {String} options.root The Root path for view lookup
+   */
+  constructor(name, opts = {}) {
+    this.defaultEngine = opts.defaultEngine
+    this.ext = extname(name)
+    this.name = name
+    this.root = opts.root
+
+    if (!this.ext &amp;&amp; !this.defaultEngine) {
+      throw new Error(&apos;No default engine was specified and no extension was provided.&apos;)
+    }
+
+    var fileName = name
+
+    if (!this.ext) {
+      // get extension from default engine name
+      this.ext = this.defaultEngine[0] !== &apos;.&apos; ? &apos;.&apos; + this.defaultEngine : this.defaultEngine
+
+      fileName += this.ext
+    }
+
+    // store loaded engine
+    this.engine = opts.engines.get(this.ext)
+
+    // store filename
+    this.fileName = fileName
+  }
+
+  /**
+   * Lazy fetch the file path
+   *
+   * @returns {string} The file path
+   */
+  *fetchPath() {
+    return this.path || (this.path = yield this.lookup(this.fileName))
+  }
+
+  /**
+   * Lookup view by the given `name`
+   *
+   * @param {String} name The file name
+   * @returns {String} The file path
+   */
+  *lookup(name) {
+    var path
+    var roots = [].concat(this.root)
+
+    debug(`lookup &quot;${name}&quot;`)
+
+    for (var i = 0; i &lt; roots.length &amp;&amp; !path; i++) {
+      var root = roots[i]
+
+      // resolve the path
+      var loc = resolve(root, name)
+      var dir = dirname(loc)
+      var file = basename(loc)
+
+      // resolve the file
+      path = yield this.resolve(dir, file)
+    }
+
+    return path
+  }
+
+  /**
+   * Render with the given options
+   *
+   * @param {Object} options
+   * @returns {String} The rendered template string
+   */
+  *render(options) {
+    yield this.fetchPath()
+    debug(`render &quot;${this.path}&quot;`)
+    return yield this.engine(this.path, options)
+  }
+
+  /**
+   * Resolve the file within the given directory
+   *
+   * @param {String} dir
+   * @param {String} file
+   * @returns {String} The resolved file path
+   */
+  *resolve(dir, file) {
+    var ext = this.ext
+
+    // &lt;path&gt;.&lt;ext&gt;
+    var path = join(dir, file)
+    var stat = yield tryStat(path)
+
+    if (stat &amp;&amp; stat.isFile()) {
+      return path
+    }
+
+    // &lt;path&gt;/index.&lt;ext&gt;
+    path = join(dir, basename(file, ext), `index${ext}`)
+    stat = yield tryStat(path)
+
+    if (stat &amp;&amp; stat.isFile()) {
+      return path
+    }
+  }
+
+}
+
+/**
+ * Return a stat, maybe
+ *
+ * @param {String} path
+ * @return {fs.Stats}
+ * @private
+ */
+function* tryStat(path) {
+  debug(`stat &quot;${path}&quot;`)
+
+  try {
+    return yield fs.stat(path)
+  } catch (e) {
+    return
+  }
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

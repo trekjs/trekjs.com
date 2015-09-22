@@ -1,0 +1,4916 @@
+[
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Config.js",
+    "memberof": null,
+    "longname": "src/Config.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Config\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { extname} from 'path'\nimport { readFile } from 'mz/fs'\nimport { Env, Memory } from 'nconf'\nimport chalk from 'chalk'\nimport dotenv from 'dotenv'\nimport templatly from 'templatly'\nimport Paths from './Paths'\nimport Parsers from './Parsers'\n\n/**\n * The app's configuration\n */\nexport default class Config {\n\n  /**\n   * @param {String} root The app's root path\n   * @param {String} [separator='.'] The keypath separator\n   */\n  constructor(root, separator = '.') {\n    this.root = root\n    this.separator = separator\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this.parsers = Parsers\n    this.paths = new Paths(this.root)\n    // init stores\n    this.stores = new Map()\n    // init list\n    this.list = [\n      // key, namespace, init store, enable/disable namespace, env\n      ['config/database', 'database', null, true, Trek.env],\n      ['config/secrets', 'secrets', null, true, Trek.env],\n      ['config/app.env', 'user'], // app.${Trek.env}\n      ['config/app', 'global'],\n      ['config/.env', 'env', new Env()], // .env.${Trek.env}\n    ]\n  }\n\n  /**\n   * Load dotenv `.env.{development|test|production}`\n   *\n   * @returns {void}\n   */\n  dotenv() {\n    let env = this.paths.get('config/.env') // .env.${Trek.env}\n    let existed = !!env\n    let loaded = false\n    if (existed) {\n      loaded = dotenv.config({\n        path: `${this.root}/${env}`,\n        silent: true\n      })\n    }\n    env = env || this.paths.getPattern('config/.env')\n    if (loaded) Trek.logger.debug('Loaded environment variables from %s to %s.', chalk.green(env), chalk.gray('process.env'))\n    else Trek.logger.warn('Missing %s dotenv file or parse failed.', chalk.red(env))\n  }\n\n  /**\n   * Load app.toml app.{development|test|production}.toml\n   *\n   * @returns {void}\n   */\n  *loadList() {\n    let tmp = []\n\n    for (let item of this.list) {\n      let [k, t, nc, n, e] = item\n      let p = this.paths.get(k)\n      let [existed, loaded, err] = [!!(p || nc), true, null]\n      if (existed) {\n        try {\n          let s = nc || (yield this.compile(`${this.root}/${p}`, n ? t : null, e))\n          this.stores.set(t, s)\n        } catch (e) {\n          err = e\n          loaded = false\n        }\n      }\n      tmp.unshift({\n        pattern: this.paths.getPattern(k),\n        filename: p,\n        loaded: existed & loaded,\n        error: err,\n        namespace: t\n      })\n    }\n\n    for (let [k, s] of this.stores.entries()) {\n      s.loadSync()\n    }\n\n    tmp.forEach((e) => {\n      let {\n        pattern, filename, loaded, error, namespace\n      } = e\n      filename = (namespace === 'env' ? 'process.env': filename) || pattern\n      if (loaded) Trek.logger.debug('Loaded %s.', chalk.green(filename))\n      else Trek.logger.warn('Missing %s or parse failed, %s.', chalk.red(filename), chalk.red(error))\n    })\n  }\n\n  /**\n   * Load dotenv and app config files\n   *\n   * @returns {void}\n   */\n  *load() {\n    // first, load dotenv\n    this.dotenv()\n    // second, load list\n    yield this.loadList()\n  }\n\n  /**\n   * Use templatly to render thie file, then parse file to Memory\n   *\n   * @param {String} filename The file path\n   * @param {String} namespace Set a namespace for current store\n   * @param {String} env\n   * @returns {nconf.Memory}\n   */\n  *compile(filename, namespace, env) {\n    let content = yield this.render(filename)\n    let data = this.parse(content, filename)\n    let memory = new Memory({\n      logicalSeparator: this.separator\n    })\n    // select env\n    if (env) {\n      data = data[env] || data\n    }\n    // add namespace for data\n    if (namespace) {\n      data = {\n        [namespace]: data\n      }\n    }\n    memory.store = data || Object.create(null)\n    return memory\n  }\n\n  /**\n   * First, uses native `template-strings` for rendering configuration file\n   *\n   * @returns {String} The rendered template strings\n   */\n  *render(filename, locals = Object.create(null)) {\n    let content = yield readFile(filename, 'utf-8')\n    Object.assign(locals, {\n      env: process.env,\n      config: this\n    })\n    return templatly(content, locals)\n  }\n\n  /**\n   * Parse the file from `.js`, `.json`, `.toml`, `.yml`\n   *\n   * @param {String} content The file raw content\n   * @param {String} filename The file path\n   * @returns {nconf.Memory}\n   */\n  parse(content, filename) {\n    let ext = extname(filename).substring(1)\n    // parser\n    let p = this.parsers[ext]\n    if (!p) return Object.create(null)\n    return p.parse(content, filename)\n  }\n\n  /**\n   * Get value by key from Config\n   *\n   *  search: env -> user -> global\n   *\n   * @param {String} key\n   * @param {Mixed} [defaultValue]\n   * @returns {Mixed}\n   */\n  get(key, defaultValue) {\n    let value\n    for (let s of this.stores.values()) {\n      value = s.get(key)\n      if (value) return value\n    }\n    return defaultValue\n  }\n\n  /**\n   * Set value by key onto Config\n   *\n   * @param {String} key\n   * @param {Mixed} value\n   * @param {String} [type='user'] The namespace\n   * @returns {void}\n   */\n  set(key, value, type = 'user') {\n    if (this.stores.has(type)) {\n      this.stores.get(type).set(key, value)\n    }\n  }\n\n}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Config",
+    "memberof": "src/Config.js",
+    "longname": "src/Config.js~Config",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/Config.js",
+    "importStyle": "Config",
+    "description": "The app's configuration",
+    "lineNumber": 19,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 25,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "root",
+        "description": "The app's root path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "'.'",
+        "defaultRaw": "'.'",
+        "name": "separator",
+        "description": "The keypath separator"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "root",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#root",
+    "access": null,
+    "description": null,
+    "lineNumber": 26,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "separator",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#separator",
+    "access": null,
+    "description": null,
+    "lineNumber": 27,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "initialize",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#initialize",
+    "access": "private",
+    "description": null,
+    "lineNumber": 34,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "parsers",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#parsers",
+    "access": null,
+    "description": null,
+    "lineNumber": 35,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "paths",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#paths",
+    "access": null,
+    "description": null,
+    "lineNumber": 36,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "stores",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#stores",
+    "access": null,
+    "description": null,
+    "lineNumber": 38,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "list",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#list",
+    "access": null,
+    "description": null,
+    "lineNumber": 40,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "dotenv",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#dotenv",
+    "access": null,
+    "description": "Load dotenv `.env.{development|test|production}`",
+    "lineNumber": 55,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "loadList",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#loadList",
+    "access": null,
+    "description": "Load app.toml app.{development|test|production}.toml",
+    "lineNumber": 75,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "load",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#load",
+    "access": null,
+    "description": "Load dotenv and app config files",
+    "lineNumber": 119,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "compile",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#compile",
+    "access": null,
+    "description": "Use templatly to render thie file, then parse file to Memory",
+    "lineNumber": 134,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{nconf.Memory}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "filename",
+        "description": "The file path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "namespace",
+        "description": "Set a namespace for current store"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "env",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "nconf.Memory"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "render",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#render",
+    "access": null,
+    "description": "First, uses native `template-strings` for rendering configuration file",
+    "lineNumber": 159,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} The rendered template strings"
+      }
+    ],
+    "params": [
+      {
+        "name": "filename",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "locals",
+        "optional": true,
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "The rendered template strings"
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "parse",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#parse",
+    "access": null,
+    "description": "Parse the file from `.js`, `.json`, `.toml`, `.yml`",
+    "lineNumber": 175,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{nconf.Memory}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "content",
+        "description": "The file raw content"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "filename",
+        "description": "The file path"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "nconf.Memory"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#get",
+    "access": null,
+    "description": "Get value by key from Config\n\n search: env -> user -> global",
+    "lineNumber": 192,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Mixed}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Mixed"
+        ],
+        "spread": false,
+        "optional": true,
+        "name": "defaultValue",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Mixed"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "set",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#set",
+    "access": null,
+    "description": "Set value by key onto Config",
+    "lineNumber": 209,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Mixed"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "'user'",
+        "defaultRaw": "'user'",
+        "name": "type",
+        "description": "The namespace"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Context.js",
+    "memberof": null,
+    "longname": "src/Context.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Context\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename } from 'path'\nimport send from 'koa-send'\nimport originalContext from 'koa/lib/context'\n\n/**\n * The app's context\n *\n * @extends koa/lib/context\n */\nexport default class Context {\n\n  constructor() {\n    this.params = Object.create(null)\n  }\n\n  /**\n   * The `app.config` delegation\n   *\n   * @returns {Config}\n   */\n  get config() {\n    return this.app.config\n  }\n\n  /**\n   * The `app.logger` delegation\n   *\n   * @example\n   *  ctx.logger.info('log somtehing')\n   *\n   * @returns {winston.Logger}\n   */\n  get logger() {\n    return this.app.logger\n  }\n\n  /**\n   * The `app.getService` delegation\n   *\n   * @example\n   *  let db = ctx.getService('sequelize')\n   *\n   * @returns {Mixed} service\n   */\n  getService(key) {\n    return this.app.getService(key)\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield ctx.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {void}\n   */\n  *render(view, options = Object.create(null)) {\n    // merge ctx.state\n    options._state = this.state\n\n    this.body = yield this.app.render(view, options)\n  }\n\n  /**\n   * Transfer the file at the given `path`.\n   *\n   * Automatically sets the _Content-Type_ response header field.\n   * The callback `callback(err)` is invoked when the transfer is complete\n   * or when an error occurs. Be sure to check `res.sentHeader`\n   * if you wish to attempt responding, as the header and some data\n   * may have already been transferred.\n   *\n   * @example\n   *\n   * // The following example illustrates how `ctx.sendFile()` may\n   * // be used as an alternative for the `static()` middleware for\n   * // dynamic situations. The code backing `res.sendFile()` is actually\n   * // the same code, so HTTP cache support etc is identical.\n   *\n   *     app.get('/user/:uid/photos/:file', function*(next){\n   *       var uid = req.params.uid\n   *         , file = req.params.file\n   *\n   *       var yes = yield req.user.mayViewFilesFrom(uid)\n   *       if (yes) {\n   *         yield ctx.sendFile('/uploads/' + uid + '/' + file)\n   *       } else {\n   *         ctx.status = 403\n   *         ctx.body = 'Sorry! you cant see that.'\n   *       }\n   *     });\n   *\n   * @param {String} path The file path\n   * @param {Object} options\n   * @param {Number} options.maxAge Defaulting to 0 (can be string converted by `ms`)\n   * @param {String} options.root Directory for relative filenames\n   * @param {Object} options.headers Object of headers to serve with file\n   * @returns {void}\n   */\n  *sendFile(path, options = Object.create(null)) {\n    var opts = Object.create({\n      disposition: 'attachment'\n    })\n    Object.assign(opts, options)\n\n    if (opts.disposition) {\n      var filename = opts.filename || basename(path)\n      this.attachment(filename)\n    }\n\n    yield send(this, path, options)\n  }\n\n  /**\n   * Send JSON response\n   *\n   * @example\n   *     ctx.json(null);\n   *     ctx.json({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @returns {void}\n   */\n  json(obj) {\n    this.body = obj\n  }\n\n  /**\n   * Send JSON response with JSONP callback support.\n   *\n   * @example\n   *     ctx.jsonp(null);\n   *     ctx.jsonp({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @param {String} [Name='callback']\n   * @returns {void}\n   */\n  jsonp(obj, name = 'callback') {\n    var body = JSON.stringify(obj)\n    var callback = this.query[name]\n\n    // fixup callback\n    if (Array.isArray(callback)) {\n      callback = callback[0]\n    }\n\n    // jsonp\n    if (typeof callback === 'string' && callback.length !== 0) {\n\n      // restrict callback charset\n      callback = callback.replace(/[^\\[\\]\\w$.]/g, '')\n\n      // replace chars not allowed in JavaScript that are in JSON\n      body = body\n        .replace(/\\u2028/g, '\\\\u2028')\n        .replace(/\\u2029/g, '\\\\u2029')\n\n      // the /**/ is a specific security mitigation for \"Rosetta Flash JSONP abuse\"\n      // the typeof check is just to reduce client error noise\n      body = '/**/ typeof ' + callback + ' === \\'function\\' && ' + callback + '(' + body + ');'\n    }\n\n    if (!this.type) {\n      this.set('X-Content-Type-Options', 'nosniff')\n      this.type = 'js'\n    }\n    this.body = body\n  }\n\n  /**\n   * Check if the request was an `XMLHttpRequest`.\n   *\n   * @example\n   *  if (ctx.xhr) ctx.body = 'AJAX'\n   *\n   * @returns {Boolean}\n   */\n  get xhr() {\n    var val = this.get('X-Requested-With') || ''\n    return val.toLowerCase() === 'xmlhttprequest'\n  }\n\n}\n\n// Sets Context's prototype to originalContext `koa/context`.\nObject.setPrototypeOf(Context.prototype, originalContext)\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Context",
+    "memberof": "src/Context.js",
+    "longname": "src/Context.js~Context",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/Context.js",
+    "importStyle": "Context",
+    "description": "The app's context",
+    "lineNumber": 16,
+    "interface": false,
+    "extends": [
+      "*"
+    ]
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 18,
+    "undocument": true,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "params",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#params",
+    "access": null,
+    "description": null,
+    "lineNumber": 19,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "config",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#config",
+    "access": null,
+    "description": "The `app.config` delegation",
+    "lineNumber": 27,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Config}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Config"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "logger",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#logger",
+    "access": null,
+    "description": "The `app.logger` delegation",
+    "examples": [
+      " ctx.logger.info('log somtehing')"
+    ],
+    "lineNumber": 39,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{winston.Logger}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "winston.Logger"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getService",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#getService",
+    "access": null,
+    "description": "The `app.getService` delegation",
+    "examples": [
+      " let db = ctx.getService('sequelize')"
+    ],
+    "lineNumber": 51,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Mixed} service"
+      }
+    ],
+    "params": [
+      {
+        "name": "key",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Mixed"
+      ],
+      "spread": false,
+      "description": "service"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "render",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#render",
+    "access": null,
+    "description": "Render `view` with the given `options`",
+    "examples": [
+      " yield ctx.render('site', { name: 'trek' })"
+    ],
+    "lineNumber": 67,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "view",
+        "description": "The name of view"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Boolean"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.cache",
+        "description": "Boolean hinting to the engine it should cache"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.filename",
+        "description": "Filename of the view being rendered"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "body",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#body",
+    "access": null,
+    "description": null,
+    "lineNumber": 71,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "sendFile",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#sendFile",
+    "access": null,
+    "description": "Transfer the file at the given `path`.\n\nAutomatically sets the _Content-Type_ response header field.\nThe callback `callback(err)` is invoked when the transfer is complete\nor when an error occurs. Be sure to check `res.sentHeader`\nif you wish to attempt responding, as the header and some data\nmay have already been transferred.",
+    "examples": [
+      "\n// The following example illustrates how `ctx.sendFile()` may\n// be used as an alternative for the `static()` middleware for\n// dynamic situations. The code backing `res.sendFile()` is actually\n// the same code, so HTTP cache support etc is identical.\n\n    app.get('/user/:uid/photos/:file', function*(next){\n      var uid = req.params.uid\n        , file = req.params.file\n\n      var yes = yield req.user.mayViewFilesFrom(uid)\n      if (yes) {\n        yield ctx.sendFile('/uploads/' + uid + '/' + file)\n      } else {\n        ctx.status = 403\n        ctx.body = 'Sorry! you cant see that.'\n      }\n    });"
+    ],
+    "lineNumber": 110,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": "The file path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.maxAge",
+        "description": "Defaulting to 0 (can be string converted by `ms`)"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.root",
+        "description": "Directory for relative filenames"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.headers",
+        "description": "Object of headers to serve with file"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "json",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#json",
+    "access": null,
+    "description": "Send JSON response",
+    "examples": [
+      "    ctx.json(null);\n    ctx.json({ user: 'tj' });"
+    ],
+    "lineNumber": 134,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String",
+          "Number",
+          "Boolean",
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "obj",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "body",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#body",
+    "access": null,
+    "description": null,
+    "lineNumber": 135,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "jsonp",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#jsonp",
+    "access": null,
+    "description": "Send JSON response with JSONP callback support.",
+    "examples": [
+      "    ctx.jsonp(null);\n    ctx.jsonp({ user: 'tj' });"
+    ],
+    "lineNumber": 149,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String",
+          "Number",
+          "Boolean",
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "obj",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "'callback'",
+        "defaultRaw": "'callback'",
+        "name": "Name",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "type",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#type",
+    "access": null,
+    "description": null,
+    "lineNumber": 176,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "body",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#body",
+    "access": null,
+    "description": null,
+    "lineNumber": 178,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "xhr",
+    "memberof": "src/Context.js~Context",
+    "longname": "src/Context.js~Context#xhr",
+    "access": null,
+    "description": "Check if the request was an `XMLHttpRequest`.",
+    "examples": [
+      " if (ctx.xhr) ctx.body = 'AJAX'"
+    ],
+    "lineNumber": 189,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Boolean}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Engine.js",
+    "memberof": null,
+    "longname": "src/Engine.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Engine\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename, dirname, join } from 'path'\nimport serveStatic from 'koa-static'\nimport chalk from 'chalk'\nimport co from 'co'\nimport composition from 'composition'\nimport Koa from 'koa'\nimport Router from 'trek-router'\nimport RouteMapper from 'route-mapper'\nimport Config from './Config'\nimport Context from './Context'\nimport View from './View'\n\nconst METHODS = Router.METHODS\n\n/**\n * The Trek Engine Core\n * @extends Koa\n */\nexport default class Engine extends Koa {\n\n  /**\n   * @param {String} rootPath The app root path.\n   */\n  constructor(rootPath) {\n    super()\n    this.initialized = false\n    this.env = Trek.env\n    if (rootPath) this.rootPath = rootPath\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    // top-most app is mounted at /\n    this.mountpath = '/'\n    this.config = new Config(this.rootPath)\n    this.router = new Router()\n    // override context\n    this.context = new Context()\n    this.engines = new Map()\n    this.cache = Object.create(null)\n    this.state = Object.create(null)\n    this.state.config = this.config\n  }\n\n  /**\n   * Stores the `value` with `key` into `app.config`\n   *\n   * @returns {Engine} this\n   */\n  set(key, value) {\n    this.config.set(key, value)\n    return this;\n  }\n\n  /**\n   * Get the app prefix path\n   *\n   * @returns {String}\n   */\n  get path() {\n    return this.parent\n      ? this.parent.path + this.mountpath\n      : ''\n  }\n\n  /**\n   * Set a working `rootPath` directory for app\n   *\n   * @param {String} root path\n   */\n  set rootPath(rootPath) {\n    this._rootPath = rootPath\n  }\n\n  /**\n   * The app working `rootPath` directory\n   *\n   * @returns {String}\n   */\n  get rootPath() {\n    return this._rootPath || (this._rootPath = dirname(require.main.filename))\n  }\n\n  /**\n   * The `config.paths` delegation\n   *\n   * @returns {Paths} config.paths\n   */\n  get paths() {\n    return this.config.paths\n  }\n\n  /**\n   * The app `logger`\n   *\n   * @return {winston.Logger}\n   */\n  get logger() {\n    return this._logger || (this._logger = Object.create(Trek.logger))\n  }\n\n  /**\n   * Get all servides\n   *\n   * @return {Map} services\n   */\n  get services() {\n    return this._services || (this._services = new Map())\n  }\n\n  /**\n   * Get a service by key\n   *\n   * @param {String} key\n   * @return {Mixed} service\n   */\n  getService(key) {\n    return this.services.get(key)\n  }\n\n  /**\n   * Stores a service\n   *\n   * @param {String} key the service name\n   * @param {Mixed} service the service instance\n   * @returns {void}\n   */\n  setService(key, value) {\n    if (this.services.has(key)) {\n      this.logger.warn(chalk.green(`service:${key} was registed`))\n      return\n    }\n    this.logger.debug(chalk.yellow('service:%s'), key)\n    this.services.set(key, value)\n  }\n\n  /**\n   * Get route mapper.\n   *\n   * @return {RouteMapper} routeMapper\n   */\n  get routeMapper() {\n    return this._routeMapper || (this._routeMapper = new RouteMapper())\n  }\n\n  /**\n   * @private\n   */\n  loadRoutes() {\n    this.logger.debug(`Start load the routes.`)\n    let routesPath = this.paths.get('config/routes', true)\n    let controllersPath = this.paths.get('app/controllers', true)\n    try {\n      //require(routesPath).call(this.routeMapper, this.routeMapper)\n      this.routeMapper.draw(routesPath)\n      this.routeMapper.routes.forEach(r => {\n        let { controller, action } = r\n        let path = join(controllersPath, controller) + '.js'\n        let c = require(path)\n        r.verb.forEach((m) => {\n          let a\n          if (c && (a = c[action])) {\n            if (!Array.isArray(a)) a = [a]\n            this.logger.debug(m, r.as, r.path, controller, action)\n            this[m](r.path, ...a)\n          }\n        });\n      });\n    } catch (e) {\n      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)\n    }\n  }\n\n  /**\n   * Load default middleware stack\n   *\n   * @private\n   */\n  defaultMiddlewareStack() {\n    let stackPath = this.paths.get('config/middleware', true)\n    let existed = !!stackPath\n    let loaded = false\n    let err\n    if (existed) {\n      try {\n        require(stackPath)(this)\n        loaded = true\n      } catch (e) {\n        err = e\n      }\n    }\n    if (!loaded) {\n      stackPath = stackPath || this.paths.getPattern('config/middleware')\n      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || '')}.`)\n    }\n  }\n\n  /**\n   * Boot the app\n   *\n   * @returns {void}\n   */\n  *bootstrap() {\n    if (this.isBooted) return\n    yield this.config.load()\n    yield this.loadServices()\n    this.defaultMiddlewareStack()\n    this.loadRoutes()\n    this.use(function* dispatcher(next) {\n      let [handler, params] = this.app.router.find(this.method, this.path)\n      if (handler) {\n        params.forEach((i) => {\n          this.params[i.name] = i.value\n        });\n        let body = yield handler.call(this, next)\n        if (body) {\n          this.body = body\n          return;\n        }\n      }\n      yield next\n    })\n    this.isBooted = true\n\n    return this\n  }\n\n  /**\n   * Register the given template engine callback `fn` * as `ext`.\n   *\n   * @param {String} ext\n   * @param {GeneratorFunction} fn\n   * @returns {Engine} this\n   */\n  engine(ext, fn) {\n    if (!fn) {\n      throw new Error('GeneratorFunction or Function required')\n    }\n\n    // get file extension\n    var extension = ext[0] !== '.'\n      ? '.' + ext\n      : ext\n\n    // store engine\n    this.engines.set(extension, fn)\n\n    return this\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield app.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {String}\n   */\n  *render(name, options = Object.create(null)) {\n    var renderOptions = Object.create(null)\n    var view\n\n    // merge app.state\n    Object.assign(renderOptions, this.state)\n\n    // merge options._state\n    if (options._state) {\n      Object.assign(renderOptions, options._state)\n    }\n\n    // merge options\n    Object.assign(renderOptions, options)\n\n    // set .cache unless explicitly provided\n    if (renderOptions.cache == null) {\n      renderOptions.cache = this.config.get('view.cache')\n    }\n\n    // primed cache\n    if (renderOptions.cache) {\n      view = this.cache[name]\n    }\n\n    if (!view) {\n      view = new View(name, Object.create({\n        defaultEngine: this.config.get('view.engine', 'html'),\n        root: this.paths.get('app/views', true),\n        engines: this.engines\n      }))\n\n      yield view.fetchPath()\n\n      if (!view.path) {\n        var dirs = Array.isArray(view.root) && view.root.length > 1\n          ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n          : 'directory \"' + view.root + '\"'\n        var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs)\n        err.view = view\n        throw err\n      }\n\n      if (renderOptions.cache) {\n        this.cache[name] = view\n      }\n    }\n\n    // render\n    return yield view.render(renderOptions)\n  }\n\n  /**\n   * Load services\n   * @returns {void}\n   */\n  *loadServices() {\n    let files = this.paths.get('app/services')\n    let seq = []\n    for (let file of files) {\n      let name = basename(file, '.js').replace(/^[0-9]+-/, '')\n      let service = require(`${this.rootPath}/${file}`)(this, this.config)\n      if (service) {\n        this.setService(name, service)\n        this.logger.debug(chalk.green(`service:${name} init ...`))\n        if (service.promise) yield service.promise\n        this.logger.debug(chalk.green(`service:${name} booted`))\n      }\n    }\n  }\n\n  /**\n   * Serves a file\n   *\n   * @param {String} path\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveFile(path, file, options) {\n    var dir = dirname(file)\n    return this.get(path, serveStatic(dir, options))\n  }\n\n  /**\n   * Serves files from a directory\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveDir(path, dir, options) {\n    dir = dirname(dir)\n    return this.get(path + '*', serveStatic(dir, options))\n  }\n\n  /**\n   * Serves static files from a directory. It's an alias for `app#serveDir`\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  static(path, dir, options) {\n    return this.serveDir(path, dir, options)\n  }\n\n  /**\n   * Serves the default favicon - GET /favicon.ico\n   *\n   * @param {String} file\n   * @returns {Engine} this\n   */\n  favicon(file) {\n    return this.serveFile('/favicon.ico', file)\n  }\n\n  /**\n   * Index serves index file\n   *\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  index(file, options) {\n    return this.serveFile('/', file, options)\n  }\n\n  /**\n   * Run the app\n   *\n   * @param {Mixed} args\n   * @returns {Promise}\n   */\n  run(...args) {\n    this.logger.debug(chalk.green('booting ...'))\n    return co.call(this, function* () {\n      yield this.bootstrap()\n      // TODO: https\n      if (!args[0]) args[0] = this.config.get('site.port')\n      this.server = this.listen(...args)\n      let address = this.server.address()\n      this.logger.info(\n        chalk.green('The application starting in %s on http://%s:%s'),\n        Trek.env,\n        address.address === '::' ? '127.0.0.1' : address.address,\n        address.port\n      )\n    }).catch((e) => {\n      this.logger.error(chalk.bold.red(`${e.stack}`))\n      this.logger.error(chalk.red('boots failed.'))\n    })\n  }\n\n  /**\n   * Match adds a route > handler to the router for multiple HTTP methods provided\n   *\n   * @param {String[]} methods\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  match(methods = [], path, ...handler) {\n    methods.forEach((m) => {\n      if (METHODS.includes(m)) {\n        let v = m.replace('-', '')\n        this[v](path, ...handler)\n      }\n    })\n    return this\n  }\n\n  /**\n   * Special-cased \"all\" method, applying the given route `path`,\n   * middleware, and handler to _every_ HTTP method.\n   *\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  all(path, ...handler) {\n    return this.match(METHODS, path, ...handler)\n  }\n\n}\n\nMETHODS\n  .forEach((m) => {\n    let v = m.replace('-', '')\n    Engine.prototype[v] = eval(`(function (c) {\n      return (function $${v}(path) {\n        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key < _len; _key++) {\n          handlers[_key] = arguments[_key + 1]\n        }\n        handlers = c(handlers)\n        this.router.add(m.toUpperCase(), path, handlers)\n        return this\n      });\n    })`)(composition)\n  })\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "METHODS",
+    "memberof": "src/Engine.js",
+    "longname": "src/Engine.js~METHODS",
+    "access": null,
+    "export": false,
+    "importPath": "trek/src/Engine.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 19,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Engine",
+    "memberof": "src/Engine.js",
+    "longname": "src/Engine.js~Engine",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/Engine.js",
+    "importStyle": "Engine",
+    "description": "The Trek Engine Core",
+    "lineNumber": 25,
+    "interface": false,
+    "extends": [
+      "*"
+    ]
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 30,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "rootPath",
+        "description": "The app root path."
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "initialized",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#initialized",
+    "access": null,
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "type": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "env",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#env",
+    "access": null,
+    "description": null,
+    "lineNumber": 33,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "rootPath",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#rootPath",
+    "access": null,
+    "description": null,
+    "lineNumber": 34,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "initialize",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#initialize",
+    "access": "private",
+    "description": null,
+    "lineNumber": 41,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "mountpath",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#mountpath",
+    "access": null,
+    "description": null,
+    "lineNumber": 43,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "config",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#config",
+    "access": null,
+    "description": null,
+    "lineNumber": 44,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "router",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#router",
+    "access": null,
+    "description": null,
+    "lineNumber": 45,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "context",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#context",
+    "access": null,
+    "description": null,
+    "lineNumber": 47,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "engines",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#engines",
+    "access": null,
+    "description": null,
+    "lineNumber": 48,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "cache",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#cache",
+    "access": null,
+    "description": null,
+    "lineNumber": 49,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "state",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#state",
+    "access": null,
+    "description": null,
+    "lineNumber": 50,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "set",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#set",
+    "access": null,
+    "description": "Stores the `value` with `key` into `app.config`",
+    "lineNumber": 59,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "name": "key",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "value",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "path",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#path",
+    "access": null,
+    "description": "Get the app prefix path",
+    "lineNumber": 69,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "set",
+    "static": false,
+    "variation": null,
+    "name": "rootPath",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#rootPath",
+    "access": null,
+    "description": "Set a working `rootPath` directory for app",
+    "lineNumber": 80,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "root",
+        "description": "path"
+      }
+    ],
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_rootPath",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#_rootPath",
+    "access": null,
+    "description": null,
+    "lineNumber": 81,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "rootPath",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#rootPath",
+    "access": null,
+    "description": "The app working `rootPath` directory",
+    "lineNumber": 89,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "paths",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#paths",
+    "access": null,
+    "description": "The `config.paths` delegation",
+    "lineNumber": 98,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Paths} config.paths"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Paths"
+      ],
+      "spread": false,
+      "description": "config.paths"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "logger",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#logger",
+    "access": null,
+    "description": "The app `logger`",
+    "lineNumber": 107,
+    "return": {
+      "nullable": null,
+      "types": [
+        "winston.Logger"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "services",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#services",
+    "access": null,
+    "description": "Get all servides",
+    "lineNumber": 116,
+    "return": {
+      "nullable": null,
+      "types": [
+        "Map"
+      ],
+      "spread": false,
+      "description": "services"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getService",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#getService",
+    "access": null,
+    "description": "Get a service by key",
+    "lineNumber": 126,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Mixed"
+      ],
+      "spread": false,
+      "description": "service"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "setService",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#setService",
+    "access": null,
+    "description": "Stores a service",
+    "lineNumber": 137,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "the service name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Mixed"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "service",
+        "description": "the service instance"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "routeMapper",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#routeMapper",
+    "access": null,
+    "description": "Get route mapper.",
+    "lineNumber": 151,
+    "return": {
+      "nullable": null,
+      "types": [
+        "RouteMapper"
+      ],
+      "spread": false,
+      "description": "routeMapper"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "loadRoutes",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#loadRoutes",
+    "access": "private",
+    "description": null,
+    "lineNumber": 158,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "defaultMiddlewareStack",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#defaultMiddlewareStack",
+    "access": "private",
+    "description": "Load default middleware stack",
+    "lineNumber": 188,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "bootstrap",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#bootstrap",
+    "access": null,
+    "description": "Boot the app",
+    "lineNumber": 212,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "body",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#body",
+    "access": null,
+    "description": null,
+    "lineNumber": 226,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "isBooted",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#isBooted",
+    "access": null,
+    "description": null,
+    "lineNumber": 232,
+    "undocument": true,
+    "type": {
+      "types": [
+        "boolean"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "engine",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#engine",
+    "access": null,
+    "description": "Register the given template engine callback `fn` * as `ext`.",
+    "lineNumber": 244,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "ext",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "GeneratorFunction"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fn",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "render",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#render",
+    "access": null,
+    "description": "Render `view` with the given `options`",
+    "examples": [
+      " yield app.render('site', { name: 'trek' })"
+    ],
+    "lineNumber": 272,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "view",
+        "description": "The name of view"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Boolean"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.cache",
+        "description": "Boolean hinting to the engine it should cache"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.filename",
+        "description": "Filename of the view being rendered"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "loadServices",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#loadServices",
+    "access": null,
+    "description": "Load services",
+    "lineNumber": 328,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "serveFile",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#serveFile",
+    "access": null,
+    "description": "Serves a file",
+    "lineNumber": 351,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "file",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "serveDir",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#serveDir",
+    "access": null,
+    "description": "Serves files from a directory",
+    "lineNumber": 364,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "dir",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "static",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#static",
+    "access": null,
+    "description": "Serves static files from a directory. It's an alias for `app#serveDir`",
+    "lineNumber": 377,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "dir",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "favicon",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#favicon",
+    "access": null,
+    "description": "Serves the default favicon - GET /favicon.ico",
+    "lineNumber": 387,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "file",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "index",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#index",
+    "access": null,
+    "description": "Index serves index file",
+    "lineNumber": 398,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "file",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "run",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#run",
+    "access": null,
+    "description": "Run the app",
+    "lineNumber": 408,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Promise}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Mixed"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "args",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "server",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#server",
+    "access": null,
+    "description": null,
+    "lineNumber": 414,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "match",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#match",
+    "access": null,
+    "description": "Match adds a route > handler to the router for multiple HTTP methods provided",
+    "lineNumber": 436,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "methods",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "GeneratorFunction[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "handler",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "all",
+    "memberof": "src/Engine.js~Engine",
+    "longname": "src/Engine.js~Engine#all",
+    "access": null,
+    "description": "Special-cased \"all\" method, applying the given route `path`,\nmiddleware, and handler to _every_ HTTP method.",
+    "lineNumber": 454,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Engine} this"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "GeneratorFunction[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "handler",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Engine"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Parsers.js",
+    "memberof": null,
+    "longname": "src/Parsers.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Parsers\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport Module from 'module'\nimport toml from 'toml'\nimport yaml from 'js-yaml'\nimport json from 'hjson'\nimport * as babel from 'babel'\n\nconst js = {\n\n  parse(content = '', filename = '') {\n    let o = babel.transform(content)\n    let m = new Module(filename)\n    m._compile(o.code, filename)\n    return m.exports\n  }\n\n}\n\nconst yml = {\n\n  parse(content = '', filename = '') {\n    return yaml.safeLoad(content)\n  }\n\n}\n\n/**\n * Includes `toml`, `yml`, `json`, `js` Parsers\n * @namespace Parsers\n */\nexport default {\n\n  toml,\n\n  yml,\n\n  json,\n\n  js\n\n}\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "js",
+    "memberof": "src/Parsers.js",
+    "longname": "src/Parsers.js~js",
+    "access": null,
+    "export": false,
+    "importPath": "trek/src/Parsers.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 13,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "yml",
+    "memberof": "src/Parsers.js",
+    "longname": "src/Parsers.js~yml",
+    "access": null,
+    "export": false,
+    "importPath": "trek/src/Parsers.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 24,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Paths.js",
+    "memberof": null,
+    "longname": "src/Paths.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Paths\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport path from 'path'\nimport glob from 'glob'\nimport _debug from 'debug'\n\nconst debug = _debug('trek:paths')\n\n/**\n *\n */\nexport default class Paths {\n\n  /**\n   * @param {String} root The root path\n   * @param {String} [formats='toml|json|js|yml'] The formats can parse and render\n   */\n  constructor(root, formats = 'toml|json|js|yml') {\n    this.root = root\n    this.formats = formats\n    this.blueprint = new Map()\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this\n      .set('app')\n      .set('app/controllers')\n      .set('app/models',        { glob: 'app/models/*.js', multi: true })\n      .set('app/views')\n      .set('app/services',      { glob: 'app/services/*.js', multi: true })\n\n      .set('lib')\n\n      .set('config')\n      .set('config/app',        { glob: `config/app.?(${this.formats})` })\n      .set(`config/app.env`,    { glob: `config/app.${Trek.env}.?(${this.formats})` })\n      .set('config/.env',       { with: `config/.env.${Trek.env}` })\n      .set('config/database',   { glob: `config/database.?(${this.formats})` })\n      .set('config/secrets',    { glob: `config/secrets.?(${this.formats})` })\n      .set('config/routes',     { with: 'config/routes.js' })\n      .set('config/middleware', { with: 'config/middleware.js' })\n      .set('config/locales')\n\n      .set('public')\n      .set('log',               { with: `log/${Trek.env}.log` })\n      .set('tmp')\n  }\n\n  /**\n   * Get the path with the key path from paths\n   *\n   * @param {String} key The key path\n   * @param {Boolean} [absolute=false] Relative or absolute path\n   * @returns {String} path\n   */\n  get(key, absolute = false) {\n    if (!this.blueprint.has(key)) return null\n    let value = this.blueprint.get(key)\n    let pattern = value.glob || value.with\n    if (pattern) {\n      let res = glob(pattern, { sync: true, realpath: absolute, cwd: this.root })\n      return value.multi ? res : res[0]\n    }\n    return path.join(absolute ? this.root : '', value)\n  }\n\n  /**\n   * Set the `value` with the `key` path onto paths\n   *\n   * @param {String} key The key path\n   * @param {Object|String} value [value=key]\n   * @returns {Paths}\n   */\n  set(key, value) {\n    value = value || key\n    debug(`set \"${key}\"`)\n    this.blueprint.set(key, value)\n    return this\n  }\n\n  /**\n   * Get the path pattern with the `key` path from paths\n   *\n   * @param {String} key The key path\n   * @returns {String} The file path\n   */\n  getPattern(key) {\n    if (!this.blueprint.has(key)) return null\n    let value = this.blueprint.get(key)\n    return value.with || value.glob || value\n  }\n\n}\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "debug",
+    "memberof": "src/Paths.js",
+    "longname": "src/Paths.js~debug",
+    "access": null,
+    "export": false,
+    "importPath": "trek/src/Paths.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Paths",
+    "memberof": "src/Paths.js",
+    "longname": "src/Paths.js~Paths",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/Paths.js",
+    "importStyle": "Paths",
+    "description": "",
+    "lineNumber": 16,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 22,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "root",
+        "description": "The root path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "'toml|json|js|yml'",
+        "defaultRaw": "'toml|json|js|yml'",
+        "name": "formats",
+        "description": "The formats can parse and render"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "root",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#root",
+    "access": null,
+    "description": null,
+    "lineNumber": 23,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "formats",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#formats",
+    "access": null,
+    "description": null,
+    "lineNumber": 24,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "blueprint",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#blueprint",
+    "access": null,
+    "description": null,
+    "lineNumber": 25,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "initialize",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#initialize",
+    "access": "private",
+    "description": null,
+    "lineNumber": 32,
+    "params": [],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#get",
+    "access": null,
+    "description": "Get the path with the key path from paths",
+    "lineNumber": 64,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} path"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "The key path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Boolean"
+        ],
+        "spread": false,
+        "optional": true,
+        "defaultValue": "false",
+        "defaultRaw": false,
+        "name": "absolute",
+        "description": "Relative or absolute path"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "path"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "set",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#set",
+    "access": null,
+    "description": "Set the `value` with the `key` path onto paths",
+    "lineNumber": 82,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{Paths}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "The key path"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object",
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "[value=key]"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Paths"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getPattern",
+    "memberof": "src/Paths.js~Paths",
+    "longname": "src/Paths.js~Paths#getPattern",
+    "access": null,
+    "description": "Get the path pattern with the `key` path from paths",
+    "lineNumber": 95,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} The file path"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "The key path"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "The file path"
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Stack.js",
+    "memberof": null,
+    "longname": "src/Stack.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import bodyParser from 'koa-bodyparser';\nimport compress from 'koa-compress';\nimport methodOverride from 'koa-methodoverride';\n"
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Trek.js",
+    "memberof": null,
+    "longname": "src/Trek.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - Trek\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport winston from 'winston'\nimport Engine from './Engine'\n\n/**\n * Construct a Trek (app) instance\n *\n * @extends Engine\n */\n\nexport default class Trek extends Engine {\n\n  /**\n   * Returns the current Trek environment\n   *\n   * @example\n   *  Trek.env\n   *  // => development | production | test\n   *\n   * @static\n   * @default 'development'\n   * @returns {Boolean}\n   */\n  static get env() {\n    return this._env\n      || (this._env = process.env.TREK_ENV\n        || process.env.NODE_ENV\n        || 'development')\n  }\n\n  /**\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   */\n  static get isProduction() {\n    return this.env === 'production'\n  }\n\n  /**\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   */\n  static get isDevelopment() {\n    return this.env === 'development'\n  }\n\n  /**\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   */\n  static get isTest() {\n    return this.env === 'test'\n  }\n\n  /**\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   */\n  static get package() {\n    return require('../package')\n  }\n\n  /**\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   */\n  static get version() {\n    return this.package.version\n  }\n\n  /**\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   */\n  static get logger() {\n    winston.default.transports.console.label = 'Trek'\n    return this._logger || (this._logger = winston.cli())\n  }\n\n  /**\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   */\n  static set logger(logger) {\n    this._logger = logger\n  }\n\n}\n\nif (!global.Trek) {\n  /**\n   * Puts `Trek` to the global\n   *\n   * @global\n   */\n  global.Trek = Trek\n}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Trek",
+    "memberof": "src/Trek.js",
+    "longname": "src/Trek.js~Trek",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/Trek.js",
+    "importStyle": "Trek",
+    "description": "Construct a Trek (app) instance",
+    "lineNumber": 16,
+    "interface": false,
+    "extends": [
+      "*"
+    ]
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "env",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.env",
+    "access": null,
+    "description": "Returns the current Trek environment",
+    "examples": [
+      " Trek.env\n // => development | production | test"
+    ],
+    "lineNumber": 29,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@default",
+        "tagValue": "'development'"
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Boolean}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "isProduction",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.isProduction",
+    "access": null,
+    "description": "Returns true if current environment is `production`",
+    "lineNumber": 42,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Boolean}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "isDevelopment",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.isDevelopment",
+    "access": null,
+    "description": "Returns true if current environment is `development`",
+    "lineNumber": 52,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Boolean}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "isTest",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.isTest",
+    "access": null,
+    "description": "Returns true if current environment is `test`",
+    "lineNumber": 62,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Boolean}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "package",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.package",
+    "access": null,
+    "description": "Returns Trek package information",
+    "lineNumber": 72,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{Object}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "version",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.version",
+    "access": null,
+    "description": "Returns Trek current version",
+    "lineNumber": 82,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{String}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "logger",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.logger",
+    "access": null,
+    "description": "Gets Trek's logger",
+    "lineNumber": 92,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{winston.Logger}"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "winston.Logger"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "set",
+    "static": true,
+    "variation": null,
+    "name": "logger",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek.logger",
+    "access": null,
+    "description": "Sets Trek's logger",
+    "lineNumber": 104,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      },
+      {
+        "tagName": "@returns",
+        "tagValue": "{void}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "logger",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "void"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": true,
+    "variation": null,
+    "name": "_logger",
+    "memberof": "src/Trek.js~Trek",
+    "longname": "src/Trek.js~Trek._logger",
+    "access": null,
+    "description": null,
+    "lineNumber": 105,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/View.js",
+    "memberof": null,
+    "longname": "src/View.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 7,
+    "content": "/*!\n * trek - View\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport fs from 'mz/fs'\nimport _debug from 'debug'\nimport { dirname, basename, extname, join, resolve } from 'path'\n\nconst debug = _debug('trek:view')\n\n/**\n * Initialize a new `View` with the given `name`\n */\nexport default class View {\n\n  /**\n   * @param {String} name\n   * @param {Object} options\n   * @param {String} options.defaultEngine The default template engine name\n   * @param {Object} options.engines Template engine require() cache\n   * @param {String} options.root The Root path for view lookup\n   */\n  constructor(name, opts = {}) {\n    this.defaultEngine = opts.defaultEngine\n    this.ext = extname(name)\n    this.name = name\n    this.root = opts.root\n\n    if (!this.ext && !this.defaultEngine) {\n      throw new Error('No default engine was specified and no extension was provided.')\n    }\n\n    var fileName = name\n\n    if (!this.ext) {\n      // get extension from default engine name\n      this.ext = this.defaultEngine[0] !== '.' ? '.' + this.defaultEngine : this.defaultEngine\n\n      fileName += this.ext\n    }\n\n    // store loaded engine\n    this.engine = opts.engines.get(this.ext)\n\n    // store filename\n    this.fileName = fileName\n  }\n\n  /**\n   * Lazy fetch the file path\n   *\n   * @returns {string} The file path\n   */\n  *fetchPath() {\n    return this.path || (this.path = yield this.lookup(this.fileName))\n  }\n\n  /**\n   * Lookup view by the given `name`\n   *\n   * @param {String} name The file name\n   * @returns {String} The file path\n   */\n  *lookup(name) {\n    var path\n    var roots = [].concat(this.root)\n\n    debug(`lookup \"${name}\"`)\n\n    for (var i = 0; i < roots.length && !path; i++) {\n      var root = roots[i]\n\n      // resolve the path\n      var loc = resolve(root, name)\n      var dir = dirname(loc)\n      var file = basename(loc)\n\n      // resolve the file\n      path = yield this.resolve(dir, file)\n    }\n\n    return path\n  }\n\n  /**\n   * Render with the given options\n   *\n   * @param {Object} options\n   * @returns {String} The rendered template string\n   */\n  *render(options) {\n    yield this.fetchPath()\n    debug(`render \"${this.path}\"`)\n    return yield this.engine(this.path, options)\n  }\n\n  /**\n   * Resolve the file within the given directory\n   *\n   * @param {String} dir\n   * @param {String} file\n   * @returns {String} The resolved file path\n   */\n  *resolve(dir, file) {\n    var ext = this.ext\n\n    // <path>.<ext>\n    var path = join(dir, file)\n    var stat = yield tryStat(path)\n\n    if (stat && stat.isFile()) {\n      return path\n    }\n\n    // <path>/index.<ext>\n    path = join(dir, basename(file, ext), `index${ext}`)\n    stat = yield tryStat(path)\n\n    if (stat && stat.isFile()) {\n      return path\n    }\n  }\n\n}\n\n/**\n * Return a stat, maybe\n *\n * @param {String} path\n * @return {fs.Stats}\n * @private\n */\nfunction* tryStat(path) {\n  debug(`stat \"${path}\"`)\n\n  try {\n    return yield fs.stat(path)\n  } catch (e) {\n    return\n  }\n}\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "debug",
+    "memberof": "src/View.js",
+    "longname": "src/View.js~debug",
+    "access": null,
+    "export": false,
+    "importPath": "trek/src/View.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 11,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "View",
+    "memberof": "src/View.js",
+    "longname": "src/View.js~View",
+    "access": null,
+    "export": true,
+    "importPath": "trek/src/View.js",
+    "importStyle": "View",
+    "description": "Initialize a new `View` with the given `name`",
+    "lineNumber": 16,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 25,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "name",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.defaultEngine",
+        "description": "The default template engine name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.engines",
+        "description": "Template engine require() cache"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.root",
+        "description": "The Root path for view lookup"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "defaultEngine",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#defaultEngine",
+    "access": null,
+    "description": null,
+    "lineNumber": 26,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "ext",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#ext",
+    "access": null,
+    "description": null,
+    "lineNumber": 27,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "name",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#name",
+    "access": null,
+    "description": null,
+    "lineNumber": 28,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "root",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#root",
+    "access": null,
+    "description": null,
+    "lineNumber": 29,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "ext",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#ext",
+    "access": null,
+    "description": null,
+    "lineNumber": 39,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "engine",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#engine",
+    "access": null,
+    "description": null,
+    "lineNumber": 45,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "fileName",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#fileName",
+    "access": null,
+    "description": null,
+    "lineNumber": 48,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "fetchPath",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#fetchPath",
+    "access": null,
+    "description": "Lazy fetch the file path",
+    "lineNumber": 56,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{string} The file path"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "string"
+      ],
+      "spread": false,
+      "description": "The file path"
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "lookup",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#lookup",
+    "access": null,
+    "description": "Lookup view by the given `name`",
+    "lineNumber": 66,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} The file path"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "name",
+        "description": "The file name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "The file path"
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "render",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#render",
+    "access": null,
+    "description": "Render with the given options",
+    "lineNumber": 93,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} The rendered template string"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "The rendered template string"
+    },
+    "generator": true
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "resolve",
+    "memberof": "src/View.js~View",
+    "longname": "src/View.js~View#resolve",
+    "access": null,
+    "description": "Resolve the file within the given directory",
+    "lineNumber": 106,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{String} The resolved file path"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "dir",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "file",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": "The resolved file path"
+    },
+    "generator": true
+  },
+  {
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "tryStat",
+    "memberof": "src/View.js",
+    "longname": "src/View.js~tryStat",
+    "access": "private",
+    "export": false,
+    "importPath": "trek/src/View.js",
+    "importStyle": null,
+    "description": "Return a stat, maybe",
+    "lineNumber": 135,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "path",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "fs.Stats"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "testFile",
+    "static": true,
+    "variation": null,
+    "name": "test/Config.test.js",
+    "memberof": null,
+    "longname": "test/Config.test.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import co from 'co'\nimport assert from 'power-assert'\nimport '../src/Trek'\nimport Config from '../src/Config'\n\ndescribe('Config', () => {\n\n  var config = new Config(__dirname + '/fixtures')\n  before(() => {\n    return co(function *() {\n      yield config.load()\n    })\n  })\n\n  describe('#get()', () => {\n    it('should return $PATH from env', () => {\n      assert(config.get('PATH').length !== 0)\n      assert(config.get('PORT') === 377)\n    })\n\n    it('should return a secret key from secrets.js', () => {\n      assert(config.get('secrets.secret_key') === 'Oabah4p')\n    })\n\n  })\n\n  describe('#set()', () => {\n    it('should return new value when reseting', () => {\n      assert(config.get('owner.age') === 144);\n      config.set('owner.age', 233)\n      assert(config.get('owner.age') === 233)\n    })\n  })\n\n})\n\n"
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe0",
+    "testId": 0,
+    "memberof": "test/Config.test.js",
+    "testDepth": 0,
+    "longname": "test/Config.test.js~describe0",
+    "access": null,
+    "description": "Config",
+    "lineNumber": 6
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe1",
+    "testId": 1,
+    "memberof": "test/Config.test.js~describe0",
+    "testDepth": 1,
+    "longname": "test/Config.test.js~describe0.describe1",
+    "access": null,
+    "description": "#get()",
+    "lineNumber": 15
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it2",
+    "testId": 2,
+    "memberof": "test/Config.test.js~describe0.describe1",
+    "testDepth": 2,
+    "longname": "test/Config.test.js~describe0.describe1.it2",
+    "access": null,
+    "description": "should return $PATH from env",
+    "lineNumber": 16
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it3",
+    "testId": 3,
+    "memberof": "test/Config.test.js~describe0.describe1",
+    "testDepth": 2,
+    "longname": "test/Config.test.js~describe0.describe1.it3",
+    "access": null,
+    "description": "should return a secret key from secrets.js",
+    "lineNumber": 21
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe4",
+    "testId": 4,
+    "memberof": "test/Config.test.js~describe0",
+    "testDepth": 1,
+    "longname": "test/Config.test.js~describe0.describe4",
+    "access": null,
+    "description": "#set()",
+    "lineNumber": 27
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it5",
+    "testId": 5,
+    "memberof": "test/Config.test.js~describe0.describe4",
+    "testDepth": 2,
+    "longname": "test/Config.test.js~describe0.describe4.it5",
+    "access": null,
+    "description": "should return new value when reseting",
+    "lineNumber": 28
+  },
+  {
+    "kind": "testFile",
+    "static": true,
+    "variation": null,
+    "name": "test/Engine.test.js",
+    "memberof": null,
+    "longname": "test/Engine.test.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import assert from 'power-assert'\nimport requireTimes from 'require-times'\nimport request from 'supertest'\nimport co from 'co'\nimport _ from 'lodash'\nimport swig from 'koa-swig'\nimport '../src/Trek'\nimport Config from '../src/Config'\nimport Paths from '../src/Paths'\nimport Engine from '../src/Engine'\n\ndescribe('Engine', () => {\n\n  var app\n  const ROOT_PATH = `${__dirname}/fixtures`\n\n  before(() => {\n    return co(function* () {\n      app = new Engine(ROOT_PATH)\n      app.logger.level = 'debug'\n      yield app.bootstrap()\n    })\n  })\n\n  describe('#env', () => {\n\n    it('should return `Trek.env`', () => {\n      assert(app.env === Trek.env)\n    })\n\n  })\n\n  describe('#rootPath', () => {\n\n    it('should set a path', () => {\n      app.rootPath = 'fixtures'\n      assert(app.rootPath === 'fixtures')\n    })\n\n    it('should get a path', () => {\n      app.rootPath = ROOT_PATH\n      assert(app.rootPath === __dirname + '/fixtures')\n    })\n\n  })\n\n  describe('#config', () => {\n\n    it('should return a Config instance', () => {\n      assert(app.config instanceof Config)\n    })\n\n  })\n\n  describe('#paths', () => {\n\n    it('should return a Paths instance', () => {\n      assert(app.paths instanceof Paths)\n    })\n\n    it('should equal to #config.paths', () => {\n      assert(app.paths === app.config.paths)\n    })\n\n  })\n\n  describe('#path', () => {\n\n    it('should return empty string when parent is null', () => {\n      assert(app.path === '')\n    })\n\n  })\n\n  describe('#run()', () => {\n\n    it('should be a function', () => {\n      assert(_.isFunction(app.run) === true)\n    })\n\n    it('should return a promise', () => {\n      assert(app.run().constructor.name === 'Promise')\n    })\n\n  })\n\n  describe('#*render()', () => {\n    var user = {\n      name: 'tobi'\n    }\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    it('should render the template', () => {\n\n      return co(function *() {\n        var str = yield app.render('user', {\n          user: user\n        })\n        assert(str === '<p>tobi</p>\\n')\n\n        var str1 = yield app.render('config', {\n          user: {\n            name: 'robo'\n          }\n        })\n        assert(str1 === 'html\\n')\n      })\n    })\n\n  })\n\n  describe('http verbs, get(), post()..., match(), all()', () => {\n\n    it('#match()', (done) => {\n\n      app.match(['get', 'post'], '/ping', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .get('/ping')\n        .expect('GET', function(){\n          request(app.listen())\n          .post('/ping')\n          .expect('POST', done)\n        })\n\n    })\n\n    it('#all()', (done) => {\n\n      app.all('/tobi', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .put('/tobi')\n        .expect('PUT', function(){\n          request(app.listen())\n          .get('/tobi')\n          .expect('GET', done)\n        })\n\n    })\n\n  })\n\n  describe('serve static', () => {\n\n    it('#index()', () => {\n\n      app.index(`${app.rootPath}/public/index.html`)\n\n      return request(app.listen())\n        .get('/')\n        .expect(200)\n\n    })\n\n    it('#favicon()', () => {\n\n      app.favicon(`${app.rootPath}/public/favicon.ico`)\n\n      return request(app.listen())\n        .get('/favicon.ico')\n        .expect(200)\n\n    })\n\n    it('#static()', () => {\n\n      app.static('/scripts', `${app.rootPath}/public/scripts`)\n\n      return request(app.listen())\n        .get('/scripts/main.js')\n        .expect(200)\n\n    })\n\n    it('#serveDir()', () => {\n\n      app.serveDir('/styles', `${app.rootPath}/public/styles`)\n\n      return request(app.listen())\n        .get('/styles/main.css')\n        .expect(200)\n\n    })\n\n  })\n\n  describe('#context', () => {\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    describe('#render()', () => {\n\n      it('should render template', () => {\n\n        app.get('/', function* () {\n          yield this.render('user', {\n            user: {\n              name: 'trek'\n            }\n          })\n        })\n\n        return request(app.listen())\n          .get('/')\n          .expect(200, '<p>trek</p>\\n')\n\n      })\n\n    })\n\n    describe('#sendFile()', () => {\n\n      it('should send a file', () => {\n\n        app.get('/robot.txt', function* () {\n\n          yield this.sendFile(`${this.app.rootPath}/public/robot.txt`)\n\n        })\n\n        return request(app.listen())\n          .get('/robot.txt')\n          .expect(200, '// robots\\n')\n\n      })\n\n    })\n\n    describe('#json()', () => {\n\n      it('should response with json', () => {\n\n        app.get('/users', function* () {\n\n          this.json([{\n            name: 'trek'\n          }])\n\n        })\n\n        return request(app.listen())\n          .get('/users')\n          .expect('Content-Type', 'application/json; charset=utf-8')\n          .expect(200, '[{\"name\":\"trek\"}]')\n\n      })\n\n    })\n\n    describe('#jsonp()', () => {\n\n      it('should response with jsonp', () => {\n\n        app.get('/jsonp', function* () {\n\n          this.jsonp({\n            count: 1\n          })\n\n        })\n\n        return request(app.listen())\n          .get('/jsonp?callback=something')\n          .expect('Content-Type', 'application/javascript; charset=utf-8')\n          .expect('X-Content-Type-Options', 'nosniff')\n          .expect(200, /something\\(\\{\"count\":1\\}\\)/)\n\n      })\n\n    })\n\n    describe('#xhr', () => {\n\n      it('should return true when X-Requested-With is xmlhttprequest', () => {\n\n        app.get('/xhr', function* () {\n          assert(this.xhr === true)\n          this.status = 200\n        })\n\n        return request(app.listen())\n          .get('/xhr')\n          .set('X-Requested-With', 'xmlhttprequest')\n          .expect(200)\n\n      })\n\n    })\n\n  })\n\n})\n"
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe6",
+    "testId": 6,
+    "memberof": "test/Engine.test.js",
+    "testDepth": 0,
+    "longname": "test/Engine.test.js~describe6",
+    "access": null,
+    "description": "Engine",
+    "lineNumber": 12
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe7",
+    "testId": 7,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe7",
+    "access": null,
+    "description": "#env",
+    "lineNumber": 25
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it8",
+    "testId": 8,
+    "memberof": "test/Engine.test.js~describe6.describe7",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe7.it8",
+    "access": null,
+    "description": "should return `Trek.env`",
+    "lineNumber": 27
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe9",
+    "testId": 9,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe9",
+    "access": null,
+    "description": "#rootPath",
+    "lineNumber": 33
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it10",
+    "testId": 10,
+    "memberof": "test/Engine.test.js~describe6.describe9",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe9.it10",
+    "access": null,
+    "description": "should set a path",
+    "lineNumber": 35
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it11",
+    "testId": 11,
+    "memberof": "test/Engine.test.js~describe6.describe9",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe9.it11",
+    "access": null,
+    "description": "should get a path",
+    "lineNumber": 40
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe12",
+    "testId": 12,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe12",
+    "access": null,
+    "description": "#config",
+    "lineNumber": 47
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it13",
+    "testId": 13,
+    "memberof": "test/Engine.test.js~describe6.describe12",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe12.it13",
+    "access": null,
+    "description": "should return a Config instance",
+    "lineNumber": 49
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe14",
+    "testId": 14,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe14",
+    "access": null,
+    "description": "#paths",
+    "lineNumber": 55
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it15",
+    "testId": 15,
+    "memberof": "test/Engine.test.js~describe6.describe14",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe14.it15",
+    "access": null,
+    "description": "should return a Paths instance",
+    "lineNumber": 57
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it16",
+    "testId": 16,
+    "memberof": "test/Engine.test.js~describe6.describe14",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe14.it16",
+    "access": null,
+    "description": "should equal to #config.paths",
+    "lineNumber": 61
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe17",
+    "testId": 17,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe17",
+    "access": null,
+    "description": "#path",
+    "lineNumber": 67
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it18",
+    "testId": 18,
+    "memberof": "test/Engine.test.js~describe6.describe17",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe17.it18",
+    "access": null,
+    "description": "should return empty string when parent is null",
+    "lineNumber": 69
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe19",
+    "testId": 19,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe19",
+    "access": null,
+    "description": "#run()",
+    "lineNumber": 75
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it20",
+    "testId": 20,
+    "memberof": "test/Engine.test.js~describe6.describe19",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe19.it20",
+    "access": null,
+    "description": "should be a function",
+    "lineNumber": 77
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it21",
+    "testId": 21,
+    "memberof": "test/Engine.test.js~describe6.describe19",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe19.it21",
+    "access": null,
+    "description": "should return a promise",
+    "lineNumber": 81
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe22",
+    "testId": 22,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe22",
+    "access": null,
+    "description": "#*render()",
+    "lineNumber": 87
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it23",
+    "testId": 23,
+    "memberof": "test/Engine.test.js~describe6.describe22",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe22.it23",
+    "access": null,
+    "description": "should render the template",
+    "lineNumber": 96
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe24",
+    "testId": 24,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe24",
+    "access": null,
+    "description": "http verbs, get(), post()..., match(), all()",
+    "lineNumber": 115
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it25",
+    "testId": 25,
+    "memberof": "test/Engine.test.js~describe6.describe24",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe24.it25",
+    "access": null,
+    "description": "#match()",
+    "lineNumber": 117
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it26",
+    "testId": 26,
+    "memberof": "test/Engine.test.js~describe6.describe24",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe24.it26",
+    "access": null,
+    "description": "#all()",
+    "lineNumber": 133
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe27",
+    "testId": 27,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe27",
+    "access": null,
+    "description": "serve static",
+    "lineNumber": 151
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it28",
+    "testId": 28,
+    "memberof": "test/Engine.test.js~describe6.describe27",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe27.it28",
+    "access": null,
+    "description": "#index()",
+    "lineNumber": 153
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it29",
+    "testId": 29,
+    "memberof": "test/Engine.test.js~describe6.describe27",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe27.it29",
+    "access": null,
+    "description": "#favicon()",
+    "lineNumber": 163
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it30",
+    "testId": 30,
+    "memberof": "test/Engine.test.js~describe6.describe27",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe27.it30",
+    "access": null,
+    "description": "#static()",
+    "lineNumber": 173
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it31",
+    "testId": 31,
+    "memberof": "test/Engine.test.js~describe6.describe27",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe27.it31",
+    "access": null,
+    "description": "#serveDir()",
+    "lineNumber": 183
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe32",
+    "testId": 32,
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe32",
+    "access": null,
+    "description": "#context",
+    "lineNumber": 195
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe33",
+    "testId": 33,
+    "memberof": "test/Engine.test.js~describe6.describe32",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe32.describe33",
+    "access": null,
+    "description": "#render()",
+    "lineNumber": 201
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it34",
+    "testId": 34,
+    "memberof": "test/Engine.test.js~describe6.describe32.describe33",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe32.describe33.it34",
+    "access": null,
+    "description": "should render template",
+    "lineNumber": 203
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe35",
+    "testId": 35,
+    "memberof": "test/Engine.test.js~describe6.describe32",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe32.describe35",
+    "access": null,
+    "description": "#sendFile()",
+    "lineNumber": 221
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it36",
+    "testId": 36,
+    "memberof": "test/Engine.test.js~describe6.describe32.describe35",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe32.describe35.it36",
+    "access": null,
+    "description": "should send a file",
+    "lineNumber": 223
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe37",
+    "testId": 37,
+    "memberof": "test/Engine.test.js~describe6.describe32",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe32.describe37",
+    "access": null,
+    "description": "#json()",
+    "lineNumber": 239
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it38",
+    "testId": 38,
+    "memberof": "test/Engine.test.js~describe6.describe32.describe37",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe32.describe37.it38",
+    "access": null,
+    "description": "should response with json",
+    "lineNumber": 241
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe39",
+    "testId": 39,
+    "memberof": "test/Engine.test.js~describe6.describe32",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe32.describe39",
+    "access": null,
+    "description": "#jsonp()",
+    "lineNumber": 260
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it40",
+    "testId": 40,
+    "memberof": "test/Engine.test.js~describe6.describe32.describe39",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe32.describe39.it40",
+    "access": null,
+    "description": "should response with jsonp",
+    "lineNumber": 262
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe41",
+    "testId": 41,
+    "memberof": "test/Engine.test.js~describe6.describe32",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe32.describe41",
+    "access": null,
+    "description": "#xhr",
+    "lineNumber": 282
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it42",
+    "testId": 42,
+    "memberof": "test/Engine.test.js~describe6.describe32.describe41",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe32.describe41.it42",
+    "access": null,
+    "description": "should return true when X-Requested-With is xmlhttprequest",
+    "lineNumber": 284
+  },
+  {
+    "kind": "testFile",
+    "static": true,
+    "variation": null,
+    "name": "test/Paths.test.js",
+    "memberof": null,
+    "longname": "test/Paths.test.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import assert from 'power-assert'\nimport '../src/Trek'\nimport Paths from '../src/Paths'\n\ndescribe('Paths', () => {\n  var paths = new Paths(__dirname + '/fixtures')\n\n  describe('#root', () => {\n    it('should return a path', () => {\n      assert(paths.root === `${__dirname}/fixtures`)\n    })\n  })\n\n  describe('#formats', () => {\n    it('should return `toml|json|js|yml`', () => {\n      assert(paths.formats === 'toml|json|js|yml')\n    })\n  })\n\n  describe('#get()', () => {\n\n    it('should return an absolute path', () => {\n      assert(paths.get('app', true) !== paths.get('app'))\n    })\n\n    it('should return app from `app`', () => {\n      assert(paths.get('app') === 'app')\n    })\n\n    it('should return an array from `app/services`', () => {\n      assert(Array.isArray(paths.get('app/services')) === true)\n    })\n\n    it('should return `config/app.toml` from `config/app`', () => {\n      assert(paths.get('config/app') === 'config/app.toml')\n    })\n\n    it('should return `config/app.test.json` from `config/app.env`', () => {\n      assert(paths.get('config/app.env') === 'config/app.test.json')\n    })\n\n    it('should return `config/.env.test` from `config/.env`', () => {\n      assert(paths.get('config/.env') === 'config/.env.test')\n    })\n\n    it('should return `config/routes.js` from `config/routes`', () => {\n      assert(paths.get('config/routes') === 'config/routes.js')\n    })\n\n  })\n\n  describe('#set()', () => {})\n\n})\n"
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe43",
+    "testId": 43,
+    "memberof": "test/Paths.test.js",
+    "testDepth": 0,
+    "longname": "test/Paths.test.js~describe43",
+    "access": null,
+    "description": "Paths",
+    "lineNumber": 5
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe44",
+    "testId": 44,
+    "memberof": "test/Paths.test.js~describe43",
+    "testDepth": 1,
+    "longname": "test/Paths.test.js~describe43.describe44",
+    "access": null,
+    "description": "#root",
+    "lineNumber": 8
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it45",
+    "testId": 45,
+    "memberof": "test/Paths.test.js~describe43.describe44",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe44.it45",
+    "access": null,
+    "description": "should return a path",
+    "lineNumber": 9
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe46",
+    "testId": 46,
+    "memberof": "test/Paths.test.js~describe43",
+    "testDepth": 1,
+    "longname": "test/Paths.test.js~describe43.describe46",
+    "access": null,
+    "description": "#formats",
+    "lineNumber": 14
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it47",
+    "testId": 47,
+    "memberof": "test/Paths.test.js~describe43.describe46",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe46.it47",
+    "access": null,
+    "description": "should return `toml|json|js|yml`",
+    "lineNumber": 15
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe48",
+    "testId": 48,
+    "memberof": "test/Paths.test.js~describe43",
+    "testDepth": 1,
+    "longname": "test/Paths.test.js~describe43.describe48",
+    "access": null,
+    "description": "#get()",
+    "lineNumber": 20
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it49",
+    "testId": 49,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it49",
+    "access": null,
+    "description": "should return an absolute path",
+    "lineNumber": 22
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it50",
+    "testId": 50,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it50",
+    "access": null,
+    "description": "should return app from `app`",
+    "lineNumber": 26
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it51",
+    "testId": 51,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it51",
+    "access": null,
+    "description": "should return an array from `app/services`",
+    "lineNumber": 30
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it52",
+    "testId": 52,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it52",
+    "access": null,
+    "description": "should return `config/app.toml` from `config/app`",
+    "lineNumber": 34
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it53",
+    "testId": 53,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it53",
+    "access": null,
+    "description": "should return `config/app.test.json` from `config/app.env`",
+    "lineNumber": 38
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it54",
+    "testId": 54,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it54",
+    "access": null,
+    "description": "should return `config/.env.test` from `config/.env`",
+    "lineNumber": 42
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it55",
+    "testId": 55,
+    "memberof": "test/Paths.test.js~describe43.describe48",
+    "testDepth": 2,
+    "longname": "test/Paths.test.js~describe43.describe48.it55",
+    "access": null,
+    "description": "should return `config/routes.js` from `config/routes`",
+    "lineNumber": 46
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe56",
+    "testId": 56,
+    "memberof": "test/Paths.test.js~describe43",
+    "testDepth": 1,
+    "longname": "test/Paths.test.js~describe43.describe56",
+    "access": null,
+    "description": "#set()",
+    "lineNumber": 52
+  },
+  {
+    "kind": "testFile",
+    "static": true,
+    "variation": null,
+    "name": "test/hello-world.test.js",
+    "memberof": null,
+    "longname": "test/hello-world.test.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import co from 'co'\nimport Trek from '../src/Trek'\nimport request from 'supertest'\n\ndescribe('Trek', () => {\n  var app\n\n  before(() => {\n    return co(function* () {\n      app = new Trek(__dirname + '/fixtures')\n      app.logger.level = 'debug'\n      yield app.bootstrap()\n    })\n  })\n\n  it('hello world', (done) => {\n    app.get('/', function*(next) {\n      return 'Hello World'\n    })\n\n    app.post('/', function*(next) {\n      return 'Post'\n    })\n\n    request(app.listen())\n      .get('/')\n      .expect(200, 'Hello World', () => {\n        request(app.listen())\n          .post('/')\n          .expect(200, 'Post', done)\n      })\n  })\n\n  describe('comments resources', () => {\n\n    let server\n\n    before(() => {\n      server = app.listen()\n    })\n\n    it('GET /comments', () => {\n      return request(server)\n        .get('/comments')\n        .expect(200, 'comments#index')\n    })\n\n    it('POST /comments', () => {\n      return request(server)\n        .post('/comments')\n        .expect(200, '{\"name\":\"trek\",\"age\":233}')\n    })\n\n    it('DELETE /comments', () => {\n      return request(server)\n        .delete('/comments/233')\n        .expect(200, 'comments#destroy')\n    })\n\n    it('GET /comments/new', () => {\n      return request(server)\n        .get('/comments/new')\n        .expect(200, 'comments#new')\n    })\n\n  })\n\n})\n"
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe57",
+    "testId": 57,
+    "memberof": "test/hello-world.test.js",
+    "testDepth": 0,
+    "longname": "test/hello-world.test.js~describe57",
+    "access": null,
+    "description": "Trek",
+    "lineNumber": 5
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it58",
+    "testId": 58,
+    "memberof": "test/hello-world.test.js~describe57",
+    "testDepth": 1,
+    "longname": "test/hello-world.test.js~describe57.it58",
+    "access": null,
+    "description": "hello world",
+    "lineNumber": 16
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe59",
+    "testId": 59,
+    "memberof": "test/hello-world.test.js~describe57",
+    "testDepth": 1,
+    "longname": "test/hello-world.test.js~describe57.describe59",
+    "access": null,
+    "description": "comments resources",
+    "lineNumber": 34
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it60",
+    "testId": 60,
+    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "testDepth": 2,
+    "longname": "test/hello-world.test.js~describe57.describe59.it60",
+    "access": null,
+    "description": "GET /comments",
+    "lineNumber": 42
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it61",
+    "testId": 61,
+    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "testDepth": 2,
+    "longname": "test/hello-world.test.js~describe57.describe59.it61",
+    "access": null,
+    "description": "POST /comments",
+    "lineNumber": 48
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it62",
+    "testId": 62,
+    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "testDepth": 2,
+    "longname": "test/hello-world.test.js~describe57.describe59.it62",
+    "access": null,
+    "description": "DELETE /comments",
+    "lineNumber": 54
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it63",
+    "testId": 63,
+    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "testDepth": 2,
+    "longname": "test/hello-world.test.js~describe57.describe59.it63",
+    "access": null,
+    "description": "GET /comments/new",
+    "lineNumber": 60
+  }
+]

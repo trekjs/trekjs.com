@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Paths.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Paths.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*!
+ * trek - Paths
+ * Copyright(c) 2015 Fangdun Cai
+ * MIT Licensed
+ */
+
+import path from &apos;path&apos;
+import glob from &apos;glob&apos;
+import _debug from &apos;debug&apos;
+
+const debug = _debug(&apos;trek:paths&apos;)
+
+/**
+ *
+ */
+export default class Paths {
+
+  /**
+   * @param {String} root The root path
+   * @param {String} [formats=&apos;toml|json|js|yml&apos;] The formats can parse and render
+   */
+  constructor(root, formats = &apos;toml|json|js|yml&apos;) {
+    this.root = root
+    this.formats = formats
+    this.blueprint = new Map()
+    this.initialize()
+  }
+
+  /**
+   * @private
+   */
+  initialize() {
+    this
+      .set(&apos;app&apos;)
+      .set(&apos;app/controllers&apos;)
+      .set(&apos;app/models&apos;,        { glob: &apos;app/models/*.js&apos;, multi: true })
+      .set(&apos;app/views&apos;)
+      .set(&apos;app/services&apos;,      { glob: &apos;app/services/*.js&apos;, multi: true })
+
+      .set(&apos;lib&apos;)
+
+      .set(&apos;config&apos;)
+      .set(&apos;config/app&apos;,        { glob: `config/app.?(${this.formats})` })
+      .set(`config/app.env`,    { glob: `config/app.${Trek.env}.?(${this.formats})` })
+      .set(&apos;config/.env&apos;,       { with: `config/.env.${Trek.env}` })
+      .set(&apos;config/database&apos;,   { glob: `config/database.?(${this.formats})` })
+      .set(&apos;config/secrets&apos;,    { glob: `config/secrets.?(${this.formats})` })
+      .set(&apos;config/routes&apos;,     { with: &apos;config/routes.js&apos; })
+      .set(&apos;config/middleware&apos;, { with: &apos;config/middleware.js&apos; })
+      .set(&apos;config/locales&apos;)
+
+      .set(&apos;public&apos;)
+      .set(&apos;log&apos;,               { with: `log/${Trek.env}.log` })
+      .set(&apos;tmp&apos;)
+  }
+
+  /**
+   * Get the path with the key path from paths
+   *
+   * @param {String} key The key path
+   * @param {Boolean} [absolute=false] Relative or absolute path
+   * @returns {String} path
+   */
+  get(key, absolute = false) {
+    if (!this.blueprint.has(key)) return null
+    let value = this.blueprint.get(key)
+    let pattern = value.glob || value.with
+    if (pattern) {
+      let res = glob(pattern, { sync: true, realpath: absolute, cwd: this.root })
+      return value.multi ? res : res[0]
+    }
+    return path.join(absolute ? this.root : &apos;&apos;, value)
+  }
+
+  /**
+   * Set the `value` with the `key` path onto paths
+   *
+   * @param {String} key The key path
+   * @param {Object|String} value [value=key]
+   * @returns {Paths}
+   */
+  set(key, value) {
+    value = value || key
+    debug(`set &quot;${key}&quot;`)
+    this.blueprint.set(key, value)
+    return this
+  }
+
+  /**
+   * Get the path pattern with the `key` path from paths
+   *
+   * @param {String} key The key path
+   * @returns {String} The file path
+   */
+  getPattern(key) {
+    if (!this.blueprint.has(key)) return null
+    let value = this.blueprint.get(key)
+    return value.with || value.glob || value
+  }
+
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

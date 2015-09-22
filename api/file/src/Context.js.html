@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Context.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Context.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/*!
+ * trek - Context
+ * Copyright(c) 2015 Fangdun Cai
+ * MIT Licensed
+ */
+
+import { basename } from &apos;path&apos;
+import send from &apos;koa-send&apos;
+import originalContext from &apos;koa/lib/context&apos;
+
+/**
+ * The app&apos;s context
+ *
+ * @extends koa/lib/context
+ */
+export default class Context {
+
+  constructor() {
+    this.params = Object.create(null)
+  }
+
+  /**
+   * The `app.config` delegation
+   *
+   * @returns {Config}
+   */
+  get config() {
+    return this.app.config
+  }
+
+  /**
+   * The `app.logger` delegation
+   *
+   * @example
+   *  ctx.logger.info(&apos;log somtehing&apos;)
+   *
+   * @returns {winston.Logger}
+   */
+  get logger() {
+    return this.app.logger
+  }
+
+  /**
+   * The `app.getService` delegation
+   *
+   * @example
+   *  let db = ctx.getService(&apos;sequelize&apos;)
+   *
+   * @returns {Mixed} service
+   */
+  getService(key) {
+    return this.app.getService(key)
+  }
+
+  /**
+   * Render `view` with the given `options`
+   *
+   * @example
+   *  yield ctx.render(&apos;site&apos;, { name: &apos;trek&apos; })
+   *
+   * @param {String} view The name of view
+   * @param {Object} options
+   * @param {Boolean} options.cache Boolean hinting to the engine it should cache
+   * @param {String} options.filename Filename of the view being rendered
+   * @returns {void}
+   */
+  *render(view, options = Object.create(null)) {
+    // merge ctx.state
+    options._state = this.state
+
+    this.body = yield this.app.render(view, options)
+  }
+
+  /**
+   * Transfer the file at the given `path`.
+   *
+   * Automatically sets the _Content-Type_ response header field.
+   * The callback `callback(err)` is invoked when the transfer is complete
+   * or when an error occurs. Be sure to check `res.sentHeader`
+   * if you wish to attempt responding, as the header and some data
+   * may have already been transferred.
+   *
+   * @example
+   *
+   * // The following example illustrates how `ctx.sendFile()` may
+   * // be used as an alternative for the `static()` middleware for
+   * // dynamic situations. The code backing `res.sendFile()` is actually
+   * // the same code, so HTTP cache support etc is identical.
+   *
+   *     app.get(&apos;/user/:uid/photos/:file&apos;, function*(next){
+   *       var uid = req.params.uid
+   *         , file = req.params.file
+   *
+   *       var yes = yield req.user.mayViewFilesFrom(uid)
+   *       if (yes) {
+   *         yield ctx.sendFile(&apos;/uploads/&apos; + uid + &apos;/&apos; + file)
+   *       } else {
+   *         ctx.status = 403
+   *         ctx.body = &apos;Sorry! you cant see that.&apos;
+   *       }
+   *     });
+   *
+   * @param {String} path The file path
+   * @param {Object} options
+   * @param {Number} options.maxAge Defaulting to 0 (can be string converted by `ms`)
+   * @param {String} options.root Directory for relative filenames
+   * @param {Object} options.headers Object of headers to serve with file
+   * @returns {void}
+   */
+  *sendFile(path, options = Object.create(null)) {
+    var opts = Object.create({
+      disposition: &apos;attachment&apos;
+    })
+    Object.assign(opts, options)
+
+    if (opts.disposition) {
+      var filename = opts.filename || basename(path)
+      this.attachment(filename)
+    }
+
+    yield send(this, path, options)
+  }
+
+  /**
+   * Send JSON response
+   *
+   * @example
+   *     ctx.json(null);
+   *     ctx.json({ user: &apos;tj&apos; });
+   *
+   * @param {String|Number|Boolean|Object} obj
+   * @returns {void}
+   */
+  json(obj) {
+    this.body = obj
+  }
+
+  /**
+   * Send JSON response with JSONP callback support.
+   *
+   * @example
+   *     ctx.jsonp(null);
+   *     ctx.jsonp({ user: &apos;tj&apos; });
+   *
+   * @param {String|Number|Boolean|Object} obj
+   * @param {String} [Name=&apos;callback&apos;]
+   * @returns {void}
+   */
+  jsonp(obj, name = &apos;callback&apos;) {
+    var body = JSON.stringify(obj)
+    var callback = this.query[name]
+
+    // fixup callback
+    if (Array.isArray(callback)) {
+      callback = callback[0]
+    }
+
+    // jsonp
+    if (typeof callback === &apos;string&apos; &amp;&amp; callback.length !== 0) {
+
+      // restrict callback charset
+      callback = callback.replace(/[^\[\]\w$.]/g, &apos;&apos;)
+
+      // replace chars not allowed in JavaScript that are in JSON
+      body = body
+        .replace(/\u2028/g, &apos;\\u2028&apos;)
+        .replace(/\u2029/g, &apos;\\u2029&apos;)
+
+      // the /**/ is a specific security mitigation for &quot;Rosetta Flash JSONP abuse&quot;
+      // the typeof check is just to reduce client error noise
+      body = &apos;/**/ typeof &apos; + callback + &apos; === \&apos;function\&apos; &amp;&amp; &apos; + callback + &apos;(&apos; + body + &apos;);&apos;
+    }
+
+    if (!this.type) {
+      this.set(&apos;X-Content-Type-Options&apos;, &apos;nosniff&apos;)
+      this.type = &apos;js&apos;
+    }
+    this.body = body
+  }
+
+  /**
+   * Check if the request was an `XMLHttpRequest`.
+   *
+   * @example
+   *  if (ctx.xhr) ctx.body = &apos;AJAX&apos;
+   *
+   * @returns {Boolean}
+   */
+  get xhr() {
+    var val = this.get(&apos;X-Requested-With&apos;) || &apos;&apos;
+    return val.toLowerCase() === &apos;xmlhttprequest&apos;
+  }
+
+}
+
+// Sets Context&apos;s prototype to originalContext `koa/context`.
+Object.setPrototypeOf(Context.prototype, originalContext)
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

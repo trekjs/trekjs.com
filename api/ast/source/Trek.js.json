@@ -1,0 +1,3163 @@
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "ImportDeclaration",
+      "specifiers": [
+        {
+          "type": "ImportDefaultSpecifier",
+          "local": {
+            "type": "Identifier",
+            "name": "winston",
+            "range": [
+              80,
+              87
+            ],
+            "loc": {
+              "start": {
+                "line": 7,
+                "column": 7
+              },
+              "end": {
+                "line": 7,
+                "column": 14
+              }
+            }
+          },
+          "range": [
+            80,
+            87
+          ],
+          "loc": {
+            "start": {
+              "line": 7,
+              "column": 7
+            },
+            "end": {
+              "line": 7,
+              "column": 14
+            }
+          }
+        }
+      ],
+      "source": {
+        "type": "Literal",
+        "value": "winston",
+        "raw": "'winston'",
+        "range": [
+          93,
+          102
+        ],
+        "loc": {
+          "start": {
+            "line": 7,
+            "column": 20
+          },
+          "end": {
+            "line": 7,
+            "column": 29
+          }
+        }
+      },
+      "range": [
+        73,
+        103
+      ],
+      "loc": {
+        "start": {
+          "line": 7,
+          "column": 0
+        },
+        "end": {
+          "line": 8,
+          "column": 0
+        }
+      },
+      "leadingComments": [
+        {
+          "type": "Block",
+          "value": "!\n * trek - Trek\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n ",
+          "range": [
+            0,
+            71
+          ],
+          "loc": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end": {
+              "line": 5,
+              "column": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "ImportDeclaration",
+      "specifiers": [
+        {
+          "type": "ImportDefaultSpecifier",
+          "local": {
+            "type": "Identifier",
+            "name": "Engine",
+            "range": [
+              110,
+              116
+            ],
+            "loc": {
+              "start": {
+                "line": 8,
+                "column": 7
+              },
+              "end": {
+                "line": 8,
+                "column": 13
+              }
+            }
+          },
+          "range": [
+            110,
+            116
+          ],
+          "loc": {
+            "start": {
+              "line": 8,
+              "column": 7
+            },
+            "end": {
+              "line": 8,
+              "column": 13
+            }
+          }
+        }
+      ],
+      "source": {
+        "type": "Literal",
+        "value": "./Engine",
+        "raw": "'./Engine'",
+        "range": [
+          122,
+          132
+        ],
+        "loc": {
+          "start": {
+            "line": 8,
+            "column": 19
+          },
+          "end": {
+            "line": 8,
+            "column": 29
+          }
+        },
+        "trailingComments": [
+          {
+            "type": "Block",
+            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+            "range": [
+              134,
+              198
+            ],
+            "loc": {
+              "start": {
+                "line": 10,
+                "column": 0
+              },
+              "end": {
+                "line": 14,
+                "column": 3
+              }
+            }
+          }
+        ]
+      },
+      "range": [
+        103,
+        200
+      ],
+      "loc": {
+        "start": {
+          "line": 8,
+          "column": 0
+        },
+        "end": {
+          "line": 16,
+          "column": 0
+        }
+      }
+    },
+    {
+      "type": "ExportDefaultDeclaration",
+      "declaration": {
+        "type": "ClassDeclaration",
+        "id": {
+          "type": "Identifier",
+          "name": "Trek",
+          "range": [
+            221,
+            225
+          ],
+          "loc": {
+            "start": {
+              "line": 16,
+              "column": 21
+            },
+            "end": {
+              "line": 16,
+              "column": 25
+            }
+          }
+        },
+        "superClass": {
+          "type": "Identifier",
+          "name": "Engine",
+          "range": [
+            234,
+            240
+          ],
+          "loc": {
+            "start": {
+              "line": 16,
+              "column": 34
+            },
+            "end": {
+              "line": 16,
+              "column": 40
+            }
+          }
+        },
+        "body": {
+          "type": "ClassBody",
+          "body": [
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "env",
+                "range": [
+                  459,
+                  462
+                ],
+                "loc": {
+                  "start": {
+                    "line": 29,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 29,
+                    "column": 16
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "LogicalExpression",
+                        "operator": "||",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              478,
+                              482
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 30,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 30,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "_env",
+                            "range": [
+                              483,
+                              487
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 30,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 30,
+                                "column": 20
+                              }
+                            }
+                          },
+                          "range": [
+                            478,
+                            487
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 30,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 30,
+                              "column": 20
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "AssignmentExpression",
+                          "operator": "=",
+                          "left": {
+                            "type": "MemberExpression",
+                            "computed": false,
+                            "object": {
+                              "type": "ThisExpression",
+                              "range": [
+                                498,
+                                502
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 31,
+                                  "column": 10
+                                },
+                                "end": {
+                                  "line": 31,
+                                  "column": 14
+                                }
+                              }
+                            },
+                            "property": {
+                              "type": "Identifier",
+                              "name": "_env",
+                              "range": [
+                                503,
+                                507
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 31,
+                                  "column": 15
+                                },
+                                "end": {
+                                  "line": 31,
+                                  "column": 19
+                                }
+                              }
+                            },
+                            "range": [
+                              498,
+                              507
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 31,
+                                "column": 10
+                              },
+                              "end": {
+                                "line": 31,
+                                "column": 19
+                              }
+                            }
+                          },
+                          "right": {
+                            "type": "LogicalExpression",
+                            "operator": "||",
+                            "left": {
+                              "type": "LogicalExpression",
+                              "operator": "||",
+                              "left": {
+                                "type": "MemberExpression",
+                                "computed": false,
+                                "object": {
+                                  "type": "MemberExpression",
+                                  "computed": false,
+                                  "object": {
+                                    "type": "Identifier",
+                                    "name": "process",
+                                    "range": [
+                                      510,
+                                      517
+                                    ],
+                                    "loc": {
+                                      "start": {
+                                        "line": 31,
+                                        "column": 22
+                                      },
+                                      "end": {
+                                        "line": 31,
+                                        "column": 29
+                                      }
+                                    }
+                                  },
+                                  "property": {
+                                    "type": "Identifier",
+                                    "name": "env",
+                                    "range": [
+                                      518,
+                                      521
+                                    ],
+                                    "loc": {
+                                      "start": {
+                                        "line": 31,
+                                        "column": 30
+                                      },
+                                      "end": {
+                                        "line": 31,
+                                        "column": 33
+                                      }
+                                    }
+                                  },
+                                  "range": [
+                                    510,
+                                    521
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 31,
+                                      "column": 22
+                                    },
+                                    "end": {
+                                      "line": 31,
+                                      "column": 33
+                                    }
+                                  }
+                                },
+                                "property": {
+                                  "type": "Identifier",
+                                  "name": "TREK_ENV",
+                                  "range": [
+                                    522,
+                                    530
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 31,
+                                      "column": 34
+                                    },
+                                    "end": {
+                                      "line": 31,
+                                      "column": 42
+                                    }
+                                  }
+                                },
+                                "range": [
+                                  510,
+                                  530
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 31,
+                                    "column": 22
+                                  },
+                                  "end": {
+                                    "line": 31,
+                                    "column": 42
+                                  }
+                                }
+                              },
+                              "right": {
+                                "type": "MemberExpression",
+                                "computed": false,
+                                "object": {
+                                  "type": "MemberExpression",
+                                  "computed": false,
+                                  "object": {
+                                    "type": "Identifier",
+                                    "name": "process",
+                                    "range": [
+                                      542,
+                                      549
+                                    ],
+                                    "loc": {
+                                      "start": {
+                                        "line": 32,
+                                        "column": 11
+                                      },
+                                      "end": {
+                                        "line": 32,
+                                        "column": 18
+                                      }
+                                    }
+                                  },
+                                  "property": {
+                                    "type": "Identifier",
+                                    "name": "env",
+                                    "range": [
+                                      550,
+                                      553
+                                    ],
+                                    "loc": {
+                                      "start": {
+                                        "line": 32,
+                                        "column": 19
+                                      },
+                                      "end": {
+                                        "line": 32,
+                                        "column": 22
+                                      }
+                                    }
+                                  },
+                                  "range": [
+                                    542,
+                                    553
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 32,
+                                      "column": 11
+                                    },
+                                    "end": {
+                                      "line": 32,
+                                      "column": 22
+                                    }
+                                  }
+                                },
+                                "property": {
+                                  "type": "Identifier",
+                                  "name": "NODE_ENV",
+                                  "range": [
+                                    554,
+                                    562
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 32,
+                                      "column": 23
+                                    },
+                                    "end": {
+                                      "line": 32,
+                                      "column": 31
+                                    }
+                                  }
+                                },
+                                "range": [
+                                  542,
+                                  562
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 32,
+                                    "column": 11
+                                  },
+                                  "end": {
+                                    "line": 32,
+                                    "column": 31
+                                  }
+                                }
+                              },
+                              "range": [
+                                510,
+                                562
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 31,
+                                  "column": 22
+                                },
+                                "end": {
+                                  "line": 32,
+                                  "column": 31
+                                }
+                              }
+                            },
+                            "right": {
+                              "type": "Literal",
+                              "value": "development",
+                              "raw": "'development'",
+                              "range": [
+                                574,
+                                587
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 33,
+                                  "column": 11
+                                },
+                                "end": {
+                                  "line": 33,
+                                  "column": 24
+                                }
+                              }
+                            },
+                            "range": [
+                              510,
+                              587
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 31,
+                                "column": 22
+                              },
+                              "end": {
+                                "line": 33,
+                                "column": 24
+                              }
+                            }
+                          },
+                          "range": [
+                            498,
+                            587
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 31,
+                              "column": 10
+                            },
+                            "end": {
+                              "line": 33,
+                              "column": 24
+                            }
+                          }
+                        },
+                        "range": [
+                          478,
+                          588
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 30,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 33,
+                            "column": 25
+                          }
+                        }
+                      },
+                      "range": [
+                        471,
+                        591
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 30,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 34,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    465,
+                    592
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 29,
+                      "column": 19
+                    },
+                    "end": {
+                      "line": 34,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  462,
+                  592
+                ],
+                "loc": {
+                  "start": {
+                    "line": 29,
+                    "column": 16
+                  },
+                  "end": {
+                    "line": 34,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                448,
+                592
+              ],
+              "loc": {
+                "start": {
+                  "line": 29,
+                  "column": 2
+                },
+                "end": {
+                  "line": 34,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns the current Trek environment\n   *\n   * @example\n   *  Trek.env\n   *  // => development | production | test\n   *\n   * @static\n   * @default 'development'\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    246,
+                    445
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 18,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 28,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    596,
+                    704
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 36,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 41,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "isProduction",
+                "range": [
+                  718,
+                  730
+                ],
+                "loc": {
+                  "start": {
+                    "line": 42,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 42,
+                    "column": 25
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "BinaryExpression",
+                        "operator": "===",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              746,
+                              750
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 43,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 43,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "env",
+                            "range": [
+                              751,
+                              754
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 43,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 43,
+                                "column": 19
+                              }
+                            }
+                          },
+                          "range": [
+                            746,
+                            754
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 43,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 43,
+                              "column": 19
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "Literal",
+                          "value": "production",
+                          "raw": "'production'",
+                          "range": [
+                            759,
+                            771
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 43,
+                              "column": 24
+                            },
+                            "end": {
+                              "line": 43,
+                              "column": 36
+                            }
+                          }
+                        },
+                        "range": [
+                          746,
+                          771
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 43,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 43,
+                            "column": 36
+                          }
+                        }
+                      },
+                      "range": [
+                        739,
+                        774
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 43,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 44,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    733,
+                    775
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 42,
+                      "column": 28
+                    },
+                    "end": {
+                      "line": 44,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  730,
+                  775
+                ],
+                "loc": {
+                  "start": {
+                    "line": 42,
+                    "column": 25
+                  },
+                  "end": {
+                    "line": 44,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                707,
+                775
+              ],
+              "loc": {
+                "start": {
+                  "line": 42,
+                  "column": 2
+                },
+                "end": {
+                  "line": 44,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    596,
+                    704
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 36,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 41,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    779,
+                    888
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 46,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 51,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "isDevelopment",
+                "range": [
+                  902,
+                  915
+                ],
+                "loc": {
+                  "start": {
+                    "line": 52,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 52,
+                    "column": 26
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "BinaryExpression",
+                        "operator": "===",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              931,
+                              935
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 53,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 53,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "env",
+                            "range": [
+                              936,
+                              939
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 53,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 53,
+                                "column": 19
+                              }
+                            }
+                          },
+                          "range": [
+                            931,
+                            939
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 53,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 53,
+                              "column": 19
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "Literal",
+                          "value": "development",
+                          "raw": "'development'",
+                          "range": [
+                            944,
+                            957
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 53,
+                              "column": 24
+                            },
+                            "end": {
+                              "line": 53,
+                              "column": 37
+                            }
+                          }
+                        },
+                        "range": [
+                          931,
+                          957
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 53,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 53,
+                            "column": 37
+                          }
+                        }
+                      },
+                      "range": [
+                        924,
+                        960
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 53,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 54,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    918,
+                    961
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 52,
+                      "column": 29
+                    },
+                    "end": {
+                      "line": 54,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  915,
+                  961
+                ],
+                "loc": {
+                  "start": {
+                    "line": 52,
+                    "column": 26
+                  },
+                  "end": {
+                    "line": 54,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                891,
+                961
+              ],
+              "loc": {
+                "start": {
+                  "line": 52,
+                  "column": 2
+                },
+                "end": {
+                  "line": 54,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    779,
+                    888
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 46,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 51,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    965,
+                    1067
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 56,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 61,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "isTest",
+                "range": [
+                  1081,
+                  1087
+                ],
+                "loc": {
+                  "start": {
+                    "line": 62,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 62,
+                    "column": 19
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "BinaryExpression",
+                        "operator": "===",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              1103,
+                              1107
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 63,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 63,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "env",
+                            "range": [
+                              1108,
+                              1111
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 63,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 63,
+                                "column": 19
+                              }
+                            }
+                          },
+                          "range": [
+                            1103,
+                            1111
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 63,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 63,
+                              "column": 19
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "Literal",
+                          "value": "test",
+                          "raw": "'test'",
+                          "range": [
+                            1116,
+                            1122
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 63,
+                              "column": 24
+                            },
+                            "end": {
+                              "line": 63,
+                              "column": 30
+                            }
+                          }
+                        },
+                        "range": [
+                          1103,
+                          1122
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 63,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 63,
+                            "column": 30
+                          }
+                        }
+                      },
+                      "range": [
+                        1096,
+                        1125
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 63,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 64,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    1090,
+                    1126
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 62,
+                      "column": 22
+                    },
+                    "end": {
+                      "line": 64,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  1087,
+                  1126
+                ],
+                "loc": {
+                  "start": {
+                    "line": 62,
+                    "column": 19
+                  },
+                  "end": {
+                    "line": 64,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                1070,
+                1126
+              ],
+              "loc": {
+                "start": {
+                  "line": 62,
+                  "column": 2
+                },
+                "end": {
+                  "line": 64,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+                  "range": [
+                    965,
+                    1067
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 56,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 61,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
+                  "range": [
+                    1130,
+                    1218
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 66,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 71,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "package",
+                "range": [
+                  1232,
+                  1239
+                ],
+                "loc": {
+                  "start": {
+                    "line": 72,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 72,
+                    "column": 20
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "CallExpression",
+                        "callee": {
+                          "type": "Identifier",
+                          "name": "require",
+                          "range": [
+                            1255,
+                            1262
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 73,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 73,
+                              "column": 18
+                            }
+                          }
+                        },
+                        "arguments": [
+                          {
+                            "type": "Literal",
+                            "value": "../package",
+                            "raw": "'../package'",
+                            "range": [
+                              1263,
+                              1275
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 73,
+                                "column": 19
+                              },
+                              "end": {
+                                "line": 73,
+                                "column": 31
+                              }
+                            }
+                          }
+                        ],
+                        "range": [
+                          1255,
+                          1276
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 73,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 73,
+                            "column": 32
+                          }
+                        }
+                      },
+                      "range": [
+                        1248,
+                        1279
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 73,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 74,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    1242,
+                    1280
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 72,
+                      "column": 23
+                    },
+                    "end": {
+                      "line": 74,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  1239,
+                  1280
+                ],
+                "loc": {
+                  "start": {
+                    "line": 72,
+                    "column": 20
+                  },
+                  "end": {
+                    "line": 74,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                1221,
+                1280
+              ],
+              "loc": {
+                "start": {
+                  "line": 72,
+                  "column": 2
+                },
+                "end": {
+                  "line": 74,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
+                  "range": [
+                    1130,
+                    1218
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 66,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 71,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
+                  "range": [
+                    1284,
+                    1368
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 76,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 81,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "version",
+                "range": [
+                  1382,
+                  1389
+                ],
+                "loc": {
+                  "start": {
+                    "line": 82,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 82,
+                    "column": 20
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "MemberExpression",
+                        "computed": false,
+                        "object": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              1405,
+                              1409
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 83,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 83,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "package",
+                            "range": [
+                              1410,
+                              1417
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 83,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 83,
+                                "column": 23
+                              }
+                            }
+                          },
+                          "range": [
+                            1405,
+                            1417
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 83,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 83,
+                              "column": 23
+                            }
+                          }
+                        },
+                        "property": {
+                          "type": "Identifier",
+                          "name": "version",
+                          "range": [
+                            1418,
+                            1425
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 83,
+                              "column": 24
+                            },
+                            "end": {
+                              "line": 83,
+                              "column": 31
+                            }
+                          }
+                        },
+                        "range": [
+                          1405,
+                          1425
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 83,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 83,
+                            "column": 31
+                          }
+                        }
+                      },
+                      "range": [
+                        1398,
+                        1428
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 83,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 84,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    1392,
+                    1429
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 82,
+                      "column": 23
+                    },
+                    "end": {
+                      "line": 84,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  1389,
+                  1429
+                ],
+                "loc": {
+                  "start": {
+                    "line": 82,
+                    "column": 20
+                  },
+                  "end": {
+                    "line": 84,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                1371,
+                1429
+              ],
+              "loc": {
+                "start": {
+                  "line": 82,
+                  "column": 2
+                },
+                "end": {
+                  "line": 84,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
+                  "range": [
+                    1284,
+                    1368
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 76,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 81,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
+                  "range": [
+                    1433,
+                    1515
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 86,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 91,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "logger",
+                "range": [
+                  1529,
+                  1535
+                ],
+                "loc": {
+                  "start": {
+                    "line": 92,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 92,
+                    "column": 19
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ExpressionStatement",
+                      "expression": {
+                        "type": "AssignmentExpression",
+                        "operator": "=",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "MemberExpression",
+                            "computed": false,
+                            "object": {
+                              "type": "MemberExpression",
+                              "computed": false,
+                              "object": {
+                                "type": "MemberExpression",
+                                "computed": false,
+                                "object": {
+                                  "type": "Identifier",
+                                  "name": "winston",
+                                  "range": [
+                                    1544,
+                                    1551
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 93,
+                                      "column": 4
+                                    },
+                                    "end": {
+                                      "line": 93,
+                                      "column": 11
+                                    }
+                                  }
+                                },
+                                "property": {
+                                  "type": "Identifier",
+                                  "name": "default",
+                                  "range": [
+                                    1552,
+                                    1559
+                                  ],
+                                  "loc": {
+                                    "start": {
+                                      "line": 93,
+                                      "column": 12
+                                    },
+                                    "end": {
+                                      "line": 93,
+                                      "column": 19
+                                    }
+                                  }
+                                },
+                                "range": [
+                                  1544,
+                                  1559
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 93,
+                                    "column": 4
+                                  },
+                                  "end": {
+                                    "line": 93,
+                                    "column": 19
+                                  }
+                                }
+                              },
+                              "property": {
+                                "type": "Identifier",
+                                "name": "transports",
+                                "range": [
+                                  1560,
+                                  1570
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 93,
+                                    "column": 20
+                                  },
+                                  "end": {
+                                    "line": 93,
+                                    "column": 30
+                                  }
+                                }
+                              },
+                              "range": [
+                                1544,
+                                1570
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 93,
+                                  "column": 4
+                                },
+                                "end": {
+                                  "line": 93,
+                                  "column": 30
+                                }
+                              }
+                            },
+                            "property": {
+                              "type": "Identifier",
+                              "name": "console",
+                              "range": [
+                                1571,
+                                1578
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 93,
+                                  "column": 31
+                                },
+                                "end": {
+                                  "line": 93,
+                                  "column": 38
+                                }
+                              }
+                            },
+                            "range": [
+                              1544,
+                              1578
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 93,
+                                "column": 4
+                              },
+                              "end": {
+                                "line": 93,
+                                "column": 38
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "label",
+                            "range": [
+                              1579,
+                              1584
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 93,
+                                "column": 39
+                              },
+                              "end": {
+                                "line": 93,
+                                "column": 44
+                              }
+                            }
+                          },
+                          "range": [
+                            1544,
+                            1584
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 93,
+                              "column": 4
+                            },
+                            "end": {
+                              "line": 93,
+                              "column": 44
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "Literal",
+                          "value": "Trek",
+                          "raw": "'Trek'",
+                          "range": [
+                            1587,
+                            1593
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 93,
+                              "column": 47
+                            },
+                            "end": {
+                              "line": 93,
+                              "column": 53
+                            }
+                          }
+                        },
+                        "range": [
+                          1544,
+                          1593
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 93,
+                            "column": 4
+                          },
+                          "end": {
+                            "line": 93,
+                            "column": 53
+                          }
+                        }
+                      },
+                      "range": [
+                        1544,
+                        1598
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 93,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 94,
+                          "column": 4
+                        }
+                      }
+                    },
+                    {
+                      "type": "ReturnStatement",
+                      "argument": {
+                        "type": "LogicalExpression",
+                        "operator": "||",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              1605,
+                              1609
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 94,
+                                "column": 11
+                              },
+                              "end": {
+                                "line": 94,
+                                "column": 15
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "_logger",
+                            "range": [
+                              1610,
+                              1617
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 94,
+                                "column": 16
+                              },
+                              "end": {
+                                "line": 94,
+                                "column": 23
+                              }
+                            }
+                          },
+                          "range": [
+                            1605,
+                            1617
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 94,
+                              "column": 11
+                            },
+                            "end": {
+                              "line": 94,
+                              "column": 23
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "AssignmentExpression",
+                          "operator": "=",
+                          "left": {
+                            "type": "MemberExpression",
+                            "computed": false,
+                            "object": {
+                              "type": "ThisExpression",
+                              "range": [
+                                1622,
+                                1626
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 94,
+                                  "column": 28
+                                },
+                                "end": {
+                                  "line": 94,
+                                  "column": 32
+                                }
+                              }
+                            },
+                            "property": {
+                              "type": "Identifier",
+                              "name": "_logger",
+                              "range": [
+                                1627,
+                                1634
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 94,
+                                  "column": 33
+                                },
+                                "end": {
+                                  "line": 94,
+                                  "column": 40
+                                }
+                              }
+                            },
+                            "range": [
+                              1622,
+                              1634
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 94,
+                                "column": 28
+                              },
+                              "end": {
+                                "line": 94,
+                                "column": 40
+                              }
+                            }
+                          },
+                          "right": {
+                            "type": "CallExpression",
+                            "callee": {
+                              "type": "MemberExpression",
+                              "computed": false,
+                              "object": {
+                                "type": "Identifier",
+                                "name": "winston",
+                                "range": [
+                                  1637,
+                                  1644
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 94,
+                                    "column": 43
+                                  },
+                                  "end": {
+                                    "line": 94,
+                                    "column": 50
+                                  }
+                                }
+                              },
+                              "property": {
+                                "type": "Identifier",
+                                "name": "cli",
+                                "range": [
+                                  1645,
+                                  1648
+                                ],
+                                "loc": {
+                                  "start": {
+                                    "line": 94,
+                                    "column": 51
+                                  },
+                                  "end": {
+                                    "line": 94,
+                                    "column": 54
+                                  }
+                                }
+                              },
+                              "range": [
+                                1637,
+                                1648
+                              ],
+                              "loc": {
+                                "start": {
+                                  "line": 94,
+                                  "column": 43
+                                },
+                                "end": {
+                                  "line": 94,
+                                  "column": 54
+                                }
+                              }
+                            },
+                            "arguments": [],
+                            "range": [
+                              1637,
+                              1650
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 94,
+                                "column": 43
+                              },
+                              "end": {
+                                "line": 94,
+                                "column": 56
+                              }
+                            }
+                          },
+                          "range": [
+                            1622,
+                            1650
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 94,
+                              "column": 28
+                            },
+                            "end": {
+                              "line": 94,
+                              "column": 56
+                            }
+                          }
+                        },
+                        "range": [
+                          1605,
+                          1651
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 94,
+                            "column": 11
+                          },
+                          "end": {
+                            "line": 94,
+                            "column": 57
+                          }
+                        }
+                      },
+                      "range": [
+                        1598,
+                        1654
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 94,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 95,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    1538,
+                    1655
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 92,
+                      "column": 22
+                    },
+                    "end": {
+                      "line": 95,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  1535,
+                  1655
+                ],
+                "loc": {
+                  "start": {
+                    "line": 92,
+                    "column": 19
+                  },
+                  "end": {
+                    "line": 95,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "get",
+              "computed": false,
+              "range": [
+                1518,
+                1655
+              ],
+              "loc": {
+                "start": {
+                  "line": 92,
+                  "column": 2
+                },
+                "end": {
+                  "line": 95,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
+                  "range": [
+                    1433,
+                    1515
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 86,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 91,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "trailingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
+                  "range": [
+                    1659,
+                    1759
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 97,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 103,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            },
+            {
+              "type": "MethodDefinition",
+              "key": {
+                "type": "Identifier",
+                "name": "logger",
+                "range": [
+                  1773,
+                  1779
+                ],
+                "loc": {
+                  "start": {
+                    "line": 104,
+                    "column": 13
+                  },
+                  "end": {
+                    "line": 104,
+                    "column": 19
+                  }
+                }
+              },
+              "value": {
+                "type": "FunctionExpression",
+                "id": null,
+                "params": [
+                  {
+                    "type": "Identifier",
+                    "name": "logger",
+                    "range": [
+                      1780,
+                      1786
+                    ],
+                    "loc": {
+                      "start": {
+                        "line": 104,
+                        "column": 20
+                      },
+                      "end": {
+                        "line": 104,
+                        "column": 26
+                      }
+                    }
+                  }
+                ],
+                "body": {
+                  "type": "BlockStatement",
+                  "body": [
+                    {
+                      "type": "ExpressionStatement",
+                      "expression": {
+                        "type": "AssignmentExpression",
+                        "operator": "=",
+                        "left": {
+                          "type": "MemberExpression",
+                          "computed": false,
+                          "object": {
+                            "type": "ThisExpression",
+                            "range": [
+                              1794,
+                              1798
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 105,
+                                "column": 4
+                              },
+                              "end": {
+                                "line": 105,
+                                "column": 8
+                              }
+                            }
+                          },
+                          "property": {
+                            "type": "Identifier",
+                            "name": "_logger",
+                            "range": [
+                              1799,
+                              1806
+                            ],
+                            "loc": {
+                              "start": {
+                                "line": 105,
+                                "column": 9
+                              },
+                              "end": {
+                                "line": 105,
+                                "column": 16
+                              }
+                            }
+                          },
+                          "range": [
+                            1794,
+                            1806
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 105,
+                              "column": 4
+                            },
+                            "end": {
+                              "line": 105,
+                              "column": 16
+                            }
+                          }
+                        },
+                        "right": {
+                          "type": "Identifier",
+                          "name": "logger",
+                          "range": [
+                            1809,
+                            1815
+                          ],
+                          "loc": {
+                            "start": {
+                              "line": 105,
+                              "column": 19
+                            },
+                            "end": {
+                              "line": 105,
+                              "column": 25
+                            }
+                          }
+                        },
+                        "range": [
+                          1794,
+                          1815
+                        ],
+                        "loc": {
+                          "start": {
+                            "line": 105,
+                            "column": 4
+                          },
+                          "end": {
+                            "line": 105,
+                            "column": 25
+                          }
+                        }
+                      },
+                      "range": [
+                        1794,
+                        1818
+                      ],
+                      "loc": {
+                        "start": {
+                          "line": 105,
+                          "column": 4
+                        },
+                        "end": {
+                          "line": 106,
+                          "column": 2
+                        }
+                      }
+                    }
+                  ],
+                  "range": [
+                    1788,
+                    1819
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 104,
+                      "column": 28
+                    },
+                    "end": {
+                      "line": 106,
+                      "column": 3
+                    }
+                  }
+                },
+                "generator": false,
+                "expression": false,
+                "range": [
+                  1779,
+                  1819
+                ],
+                "loc": {
+                  "start": {
+                    "line": 104,
+                    "column": 19
+                  },
+                  "end": {
+                    "line": 106,
+                    "column": 3
+                  }
+                }
+              },
+              "kind": "set",
+              "computed": false,
+              "range": [
+                1762,
+                1819
+              ],
+              "loc": {
+                "start": {
+                  "line": 104,
+                  "column": 2
+                },
+                "end": {
+                  "line": 106,
+                  "column": 3
+                }
+              },
+              "leadingComments": [
+                {
+                  "type": "Block",
+                  "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
+                  "range": [
+                    1659,
+                    1759
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 97,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 103,
+                      "column": 5
+                    }
+                  }
+                }
+              ],
+              "static": true
+            }
+          ],
+          "range": [
+            241,
+            1822
+          ],
+          "loc": {
+            "start": {
+              "line": 16,
+              "column": 41
+            },
+            "end": {
+              "line": 108,
+              "column": 1
+            }
+          }
+        },
+        "range": [
+          215,
+          1822
+        ],
+        "loc": {
+          "start": {
+            "line": 16,
+            "column": 15
+          },
+          "end": {
+            "line": 108,
+            "column": 1
+          }
+        },
+        "leadingComments": [
+          {
+            "type": "Block",
+            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+            "range": [
+              134,
+              198
+            ],
+            "loc": {
+              "start": {
+                "line": 10,
+                "column": 0
+              },
+              "end": {
+                "line": 14,
+                "column": 3
+              }
+            }
+          }
+        ],
+        "trailingComments": []
+      },
+      "range": [
+        200,
+        1822
+      ],
+      "loc": {
+        "start": {
+          "line": 16,
+          "column": 0
+        },
+        "end": {
+          "line": 108,
+          "column": 1
+        }
+      },
+      "leadingComments": [
+        {
+          "type": "Block",
+          "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+          "range": [
+            134,
+            198
+          ],
+          "loc": {
+            "start": {
+              "line": 10,
+              "column": 0
+            },
+            "end": {
+              "line": 14,
+              "column": 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "IfStatement",
+      "test": {
+        "type": "UnaryExpression",
+        "operator": "!",
+        "argument": {
+          "type": "MemberExpression",
+          "computed": false,
+          "object": {
+            "type": "Identifier",
+            "name": "global",
+            "range": [
+              1829,
+              1835
+            ],
+            "loc": {
+              "start": {
+                "line": 110,
+                "column": 5
+              },
+              "end": {
+                "line": 110,
+                "column": 11
+              }
+            }
+          },
+          "property": {
+            "type": "Identifier",
+            "name": "Trek",
+            "range": [
+              1836,
+              1840
+            ],
+            "loc": {
+              "start": {
+                "line": 110,
+                "column": 12
+              },
+              "end": {
+                "line": 110,
+                "column": 16
+              }
+            }
+          },
+          "range": [
+            1829,
+            1840
+          ],
+          "loc": {
+            "start": {
+              "line": 110,
+              "column": 5
+            },
+            "end": {
+              "line": 110,
+              "column": 16
+            }
+          }
+        },
+        "prefix": true,
+        "range": [
+          1828,
+          1840
+        ],
+        "loc": {
+          "start": {
+            "line": 110,
+            "column": 4
+          },
+          "end": {
+            "line": 110,
+            "column": 16
+          }
+        }
+      },
+      "consequent": {
+        "type": "BlockStatement",
+        "body": [
+          {
+            "type": "ExpressionStatement",
+            "expression": {
+              "type": "AssignmentExpression",
+              "operator": "=",
+              "left": {
+                "type": "MemberExpression",
+                "computed": false,
+                "object": {
+                  "type": "Identifier",
+                  "name": "global",
+                  "range": [
+                    1907,
+                    1913
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 116,
+                      "column": 2
+                    },
+                    "end": {
+                      "line": 116,
+                      "column": 8
+                    }
+                  }
+                },
+                "property": {
+                  "type": "Identifier",
+                  "name": "Trek",
+                  "range": [
+                    1914,
+                    1918
+                  ],
+                  "loc": {
+                    "start": {
+                      "line": 116,
+                      "column": 9
+                    },
+                    "end": {
+                      "line": 116,
+                      "column": 13
+                    }
+                  }
+                },
+                "range": [
+                  1907,
+                  1918
+                ],
+                "loc": {
+                  "start": {
+                    "line": 116,
+                    "column": 2
+                  },
+                  "end": {
+                    "line": 116,
+                    "column": 13
+                  }
+                }
+              },
+              "right": {
+                "type": "Identifier",
+                "name": "Trek",
+                "range": [
+                  1921,
+                  1925
+                ],
+                "loc": {
+                  "start": {
+                    "line": 116,
+                    "column": 16
+                  },
+                  "end": {
+                    "line": 116,
+                    "column": 20
+                  }
+                }
+              },
+              "range": [
+                1907,
+                1925
+              ],
+              "loc": {
+                "start": {
+                  "line": 116,
+                  "column": 2
+                },
+                "end": {
+                  "line": 116,
+                  "column": 20
+                }
+              }
+            },
+            "range": [
+              1907,
+              1926
+            ],
+            "loc": {
+              "start": {
+                "line": 116,
+                "column": 2
+              },
+              "end": {
+                "line": 117,
+                "column": 0
+              }
+            },
+            "leadingComments": [
+              {
+                "type": "Block",
+                "value": "*\n   * Puts `Trek` to the global\n   *\n   * @global\n   ",
+                "range": [
+                  1846,
+                  1904
+                ],
+                "loc": {
+                  "start": {
+                    "line": 111,
+                    "column": 2
+                  },
+                  "end": {
+                    "line": 115,
+                    "column": 5
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "range": [
+          1842,
+          1927
+        ],
+        "loc": {
+          "start": {
+            "line": 110,
+            "column": 18
+          },
+          "end": {
+            "line": 117,
+            "column": 1
+          }
+        }
+      },
+      "alternate": null,
+      "range": [
+        1824,
+        1927
+      ],
+      "loc": {
+        "start": {
+          "line": 110,
+          "column": 0
+        },
+        "end": {
+          "line": 117,
+          "column": 1
+        }
+      }
+    }
+  ],
+  "sourceType": "module",
+  "range": [
+    73,
+    1927
+  ],
+  "loc": {
+    "start": {
+      "line": 7,
+      "column": 0
+    },
+    "end": {
+      "line": 117,
+      "column": 1
+    }
+  },
+  "comments": [
+    {
+      "type": "Block",
+      "value": "!\n * trek - Trek\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n ",
+      "range": [
+        0,
+        71
+      ],
+      "loc": {
+        "start": {
+          "line": 1,
+          "column": 0
+        },
+        "end": {
+          "line": 5,
+          "column": 3
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+      "range": [
+        134,
+        198
+      ],
+      "loc": {
+        "start": {
+          "line": 10,
+          "column": 0
+        },
+        "end": {
+          "line": 14,
+          "column": 3
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns the current Trek environment\n   *\n   * @example\n   *  Trek.env\n   *  // => development | production | test\n   *\n   * @static\n   * @default 'development'\n   * @returns {Boolean}\n   ",
+      "range": [
+        246,
+        445
+      ],
+      "loc": {
+        "start": {
+          "line": 18,
+          "column": 2
+        },
+        "end": {
+          "line": 28,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+      "range": [
+        596,
+        704
+      ],
+      "loc": {
+        "start": {
+          "line": 36,
+          "column": 2
+        },
+        "end": {
+          "line": 41,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+      "range": [
+        779,
+        888
+      ],
+      "loc": {
+        "start": {
+          "line": 46,
+          "column": 2
+        },
+        "end": {
+          "line": 51,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
+      "range": [
+        965,
+        1067
+      ],
+      "loc": {
+        "start": {
+          "line": 56,
+          "column": 2
+        },
+        "end": {
+          "line": 61,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
+      "range": [
+        1130,
+        1218
+      ],
+      "loc": {
+        "start": {
+          "line": 66,
+          "column": 2
+        },
+        "end": {
+          "line": 71,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
+      "range": [
+        1284,
+        1368
+      ],
+      "loc": {
+        "start": {
+          "line": 76,
+          "column": 2
+        },
+        "end": {
+          "line": 81,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
+      "range": [
+        1433,
+        1515
+      ],
+      "loc": {
+        "start": {
+          "line": 86,
+          "column": 2
+        },
+        "end": {
+          "line": 91,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
+      "range": [
+        1659,
+        1759
+      ],
+      "loc": {
+        "start": {
+          "line": 97,
+          "column": 2
+        },
+        "end": {
+          "line": 103,
+          "column": 5
+        }
+      }
+    },
+    {
+      "type": "Block",
+      "value": "*\n   * Puts `Trek` to the global\n   *\n   * @global\n   ",
+      "range": [
+        1846,
+        1904
+      ],
+      "loc": {
+        "start": {
+          "line": 111,
+          "column": 2
+        },
+        "end": {
+          "line": 115,
+          "column": 5
+        }
+      }
+    }
+  ]
+}

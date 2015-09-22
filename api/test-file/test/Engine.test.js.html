@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">test/Engine.test.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/trekjs/trek" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Config.js~Config.html">Config</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Context.js~Context.html">Context</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Engine.js~Engine.html">Engine</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Paths.js~Paths.html">Paths</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/Trek.js~Trek.html">Trek</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/View.js~View.html">View</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">test/Engine.test.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import assert from &apos;power-assert&apos;
+import requireTimes from &apos;require-times&apos;
+import request from &apos;supertest&apos;
+import co from &apos;co&apos;
+import _ from &apos;lodash&apos;
+import swig from &apos;koa-swig&apos;
+import &apos;../src/Trek&apos;
+import Config from &apos;../src/Config&apos;
+import Paths from &apos;../src/Paths&apos;
+import Engine from &apos;../src/Engine&apos;
+
+describe(&apos;Engine&apos;, () =&gt; {
+
+  var app
+  const ROOT_PATH = `${__dirname}/fixtures`
+
+  before(() =&gt; {
+    return co(function* () {
+      app = new Engine(ROOT_PATH)
+      app.logger.level = &apos;debug&apos;
+      yield app.bootstrap()
+    })
+  })
+
+  describe(&apos;#env&apos;, () =&gt; {
+
+    it(&apos;should return `Trek.env`&apos;, () =&gt; {
+      assert(app.env === Trek.env)
+    })
+
+  })
+
+  describe(&apos;#rootPath&apos;, () =&gt; {
+
+    it(&apos;should set a path&apos;, () =&gt; {
+      app.rootPath = &apos;fixtures&apos;
+      assert(app.rootPath === &apos;fixtures&apos;)
+    })
+
+    it(&apos;should get a path&apos;, () =&gt; {
+      app.rootPath = ROOT_PATH
+      assert(app.rootPath === __dirname + &apos;/fixtures&apos;)
+    })
+
+  })
+
+  describe(&apos;#config&apos;, () =&gt; {
+
+    it(&apos;should return a Config instance&apos;, () =&gt; {
+      assert(app.config instanceof Config)
+    })
+
+  })
+
+  describe(&apos;#paths&apos;, () =&gt; {
+
+    it(&apos;should return a Paths instance&apos;, () =&gt; {
+      assert(app.paths instanceof Paths)
+    })
+
+    it(&apos;should equal to #config.paths&apos;, () =&gt; {
+      assert(app.paths === app.config.paths)
+    })
+
+  })
+
+  describe(&apos;#path&apos;, () =&gt; {
+
+    it(&apos;should return empty string when parent is null&apos;, () =&gt; {
+      assert(app.path === &apos;&apos;)
+    })
+
+  })
+
+  describe(&apos;#run()&apos;, () =&gt; {
+
+    it(&apos;should be a function&apos;, () =&gt; {
+      assert(_.isFunction(app.run) === true)
+    })
+
+    it(&apos;should return a promise&apos;, () =&gt; {
+      assert(app.run().constructor.name === &apos;Promise&apos;)
+    })
+
+  })
+
+  describe(&apos;#*render()&apos;, () =&gt; {
+    var user = {
+      name: &apos;tobi&apos;
+    }
+
+    before(() =&gt; {
+      app.engine(&apos;html&apos;, swig())
+    })
+
+    it(&apos;should render the template&apos;, () =&gt; {
+
+      return co(function *() {
+        var str = yield app.render(&apos;user&apos;, {
+          user: user
+        })
+        assert(str === &apos;&lt;p&gt;tobi&lt;/p&gt;\n&apos;)
+
+        var str1 = yield app.render(&apos;config&apos;, {
+          user: {
+            name: &apos;robo&apos;
+          }
+        })
+        assert(str1 === &apos;html\n&apos;)
+      })
+    })
+
+  })
+
+  describe(&apos;http verbs, get(), post()..., match(), all()&apos;, () =&gt; {
+
+    it(&apos;#match()&apos;, (done) =&gt; {
+
+      app.match([&apos;get&apos;, &apos;post&apos;], &apos;/ping&apos;, function* (){
+        this.body = this.req.method
+      })
+
+      request(app.listen())
+        .get(&apos;/ping&apos;)
+        .expect(&apos;GET&apos;, function(){
+          request(app.listen())
+          .post(&apos;/ping&apos;)
+          .expect(&apos;POST&apos;, done)
+        })
+
+    })
+
+    it(&apos;#all()&apos;, (done) =&gt; {
+
+      app.all(&apos;/tobi&apos;, function* (){
+        this.body = this.req.method
+      })
+
+      request(app.listen())
+        .put(&apos;/tobi&apos;)
+        .expect(&apos;PUT&apos;, function(){
+          request(app.listen())
+          .get(&apos;/tobi&apos;)
+          .expect(&apos;GET&apos;, done)
+        })
+
+    })
+
+  })
+
+  describe(&apos;serve static&apos;, () =&gt; {
+
+    it(&apos;#index()&apos;, () =&gt; {
+
+      app.index(`${app.rootPath}/public/index.html`)
+
+      return request(app.listen())
+        .get(&apos;/&apos;)
+        .expect(200)
+
+    })
+
+    it(&apos;#favicon()&apos;, () =&gt; {
+
+      app.favicon(`${app.rootPath}/public/favicon.ico`)
+
+      return request(app.listen())
+        .get(&apos;/favicon.ico&apos;)
+        .expect(200)
+
+    })
+
+    it(&apos;#static()&apos;, () =&gt; {
+
+      app.static(&apos;/scripts&apos;, `${app.rootPath}/public/scripts`)
+
+      return request(app.listen())
+        .get(&apos;/scripts/main.js&apos;)
+        .expect(200)
+
+    })
+
+    it(&apos;#serveDir()&apos;, () =&gt; {
+
+      app.serveDir(&apos;/styles&apos;, `${app.rootPath}/public/styles`)
+
+      return request(app.listen())
+        .get(&apos;/styles/main.css&apos;)
+        .expect(200)
+
+    })
+
+  })
+
+  describe(&apos;#context&apos;, () =&gt; {
+
+    before(() =&gt; {
+      app.engine(&apos;html&apos;, swig())
+    })
+
+    describe(&apos;#render()&apos;, () =&gt; {
+
+      it(&apos;should render template&apos;, () =&gt; {
+
+        app.get(&apos;/&apos;, function* () {
+          yield this.render(&apos;user&apos;, {
+            user: {
+              name: &apos;trek&apos;
+            }
+          })
+        })
+
+        return request(app.listen())
+          .get(&apos;/&apos;)
+          .expect(200, &apos;&lt;p&gt;trek&lt;/p&gt;\n&apos;)
+
+      })
+
+    })
+
+    describe(&apos;#sendFile()&apos;, () =&gt; {
+
+      it(&apos;should send a file&apos;, () =&gt; {
+
+        app.get(&apos;/robot.txt&apos;, function* () {
+
+          yield this.sendFile(`${this.app.rootPath}/public/robot.txt`)
+
+        })
+
+        return request(app.listen())
+          .get(&apos;/robot.txt&apos;)
+          .expect(200, &apos;// robots\n&apos;)
+
+      })
+
+    })
+
+    describe(&apos;#json()&apos;, () =&gt; {
+
+      it(&apos;should response with json&apos;, () =&gt; {
+
+        app.get(&apos;/users&apos;, function* () {
+
+          this.json([{
+            name: &apos;trek&apos;
+          }])
+
+        })
+
+        return request(app.listen())
+          .get(&apos;/users&apos;)
+          .expect(&apos;Content-Type&apos;, &apos;application/json; charset=utf-8&apos;)
+          .expect(200, &apos;[{&quot;name&quot;:&quot;trek&quot;}]&apos;)
+
+      })
+
+    })
+
+    describe(&apos;#jsonp()&apos;, () =&gt; {
+
+      it(&apos;should response with jsonp&apos;, () =&gt; {
+
+        app.get(&apos;/jsonp&apos;, function* () {
+
+          this.jsonp({
+            count: 1
+          })
+
+        })
+
+        return request(app.listen())
+          .get(&apos;/jsonp?callback=something&apos;)
+          .expect(&apos;Content-Type&apos;, &apos;application/javascript; charset=utf-8&apos;)
+          .expect(&apos;X-Content-Type-Options&apos;, &apos;nosniff&apos;)
+          .expect(200, /something\(\{&quot;count&quot;:1\}\)/)
+
+      })
+
+    })
+
+    describe(&apos;#xhr&apos;, () =&gt; {
+
+      it(&apos;should return true when X-Requested-With is xmlhttprequest&apos;, () =&gt; {
+
+        app.get(&apos;/xhr&apos;, function* () {
+          assert(this.xhr === true)
+          this.status = 200
+        })
+
+        return request(app.listen())
+          .get(&apos;/xhr&apos;)
+          .set(&apos;X-Requested-With&apos;, &apos;xmlhttprequest&apos;)
+          .expect(200)
+
+      })
+
+    })
+
+  })
+
+})
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.3.0)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
