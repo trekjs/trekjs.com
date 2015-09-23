@@ -154,10 +154,10 @@
         "trailingComments": [
           {
             "type": "Block",
-            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends {Engine}\n ",
             "range": [
               134,
-              198
+              200
             ],
             "loc": {
               "start": {
@@ -174,7 +174,7 @@
       },
       "range": [
         103,
-        200
+        202
       ],
       "loc": {
         "start": {
@@ -195,8 +195,8 @@
           "type": "Identifier",
           "name": "Trek",
           "range": [
-            221,
-            225
+            223,
+            227
           ],
           "loc": {
             "start": {
@@ -213,8 +213,8 @@
           "type": "Identifier",
           "name": "Engine",
           "range": [
-            234,
-            240
+            236,
+            242
           ],
           "loc": {
             "start": {
@@ -236,8 +236,8 @@
                 "type": "Identifier",
                 "name": "env",
                 "range": [
-                  459,
-                  462
+                  461,
+                  464
                 ],
                 "loc": {
                   "start": {
@@ -268,8 +268,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              478,
-                              482
+                              480,
+                              484
                             ],
                             "loc": {
                               "start": {
@@ -286,8 +286,8 @@
                             "type": "Identifier",
                             "name": "_env",
                             "range": [
-                              483,
-                              487
+                              485,
+                              489
                             ],
                             "loc": {
                               "start": {
@@ -301,8 +301,8 @@
                             }
                           },
                           "range": [
-                            478,
-                            487
+                            480,
+                            489
                           ],
                           "loc": {
                             "start": {
@@ -324,8 +324,8 @@
                             "object": {
                               "type": "ThisExpression",
                               "range": [
-                                498,
-                                502
+                                500,
+                                504
                               ],
                               "loc": {
                                 "start": {
@@ -342,8 +342,8 @@
                               "type": "Identifier",
                               "name": "_env",
                               "range": [
-                                503,
-                                507
+                                505,
+                                509
                               ],
                               "loc": {
                                 "start": {
@@ -357,8 +357,8 @@
                               }
                             },
                             "range": [
-                              498,
-                              507
+                              500,
+                              509
                             ],
                             "loc": {
                               "start": {
@@ -387,8 +387,8 @@
                                     "type": "Identifier",
                                     "name": "process",
                                     "range": [
-                                      510,
-                                      517
+                                      512,
+                                      519
                                     ],
                                     "loc": {
                                       "start": {
@@ -405,8 +405,8 @@
                                     "type": "Identifier",
                                     "name": "env",
                                     "range": [
-                                      518,
-                                      521
+                                      520,
+                                      523
                                     ],
                                     "loc": {
                                       "start": {
@@ -420,8 +420,8 @@
                                     }
                                   },
                                   "range": [
-                                    510,
-                                    521
+                                    512,
+                                    523
                                   ],
                                   "loc": {
                                     "start": {
@@ -438,8 +438,8 @@
                                   "type": "Identifier",
                                   "name": "TREK_ENV",
                                   "range": [
-                                    522,
-                                    530
+                                    524,
+                                    532
                                   ],
                                   "loc": {
                                     "start": {
@@ -453,8 +453,8 @@
                                   }
                                 },
                                 "range": [
-                                  510,
-                                  530
+                                  512,
+                                  532
                                 ],
                                 "loc": {
                                   "start": {
@@ -477,8 +477,8 @@
                                     "type": "Identifier",
                                     "name": "process",
                                     "range": [
-                                      542,
-                                      549
+                                      544,
+                                      551
                                     ],
                                     "loc": {
                                       "start": {
@@ -495,8 +495,8 @@
                                     "type": "Identifier",
                                     "name": "env",
                                     "range": [
-                                      550,
-                                      553
+                                      552,
+                                      555
                                     ],
                                     "loc": {
                                       "start": {
@@ -510,8 +510,8 @@
                                     }
                                   },
                                   "range": [
-                                    542,
-                                    553
+                                    544,
+                                    555
                                   ],
                                   "loc": {
                                     "start": {
@@ -528,8 +528,8 @@
                                   "type": "Identifier",
                                   "name": "NODE_ENV",
                                   "range": [
-                                    554,
-                                    562
+                                    556,
+                                    564
                                   ],
                                   "loc": {
                                     "start": {
@@ -543,8 +543,8 @@
                                   }
                                 },
                                 "range": [
-                                  542,
-                                  562
+                                  544,
+                                  564
                                 ],
                                 "loc": {
                                   "start": {
@@ -558,8 +558,8 @@
                                 }
                               },
                               "range": [
-                                510,
-                                562
+                                512,
+                                564
                               ],
                               "loc": {
                                 "start": {
@@ -577,8 +577,8 @@
                               "value": "development",
                               "raw": "'development'",
                               "range": [
-                                574,
-                                587
+                                576,
+                                589
                               ],
                               "loc": {
                                 "start": {
@@ -592,8 +592,8 @@
                               }
                             },
                             "range": [
-                              510,
-                              587
+                              512,
+                              589
                             ],
                             "loc": {
                               "start": {
@@ -607,8 +607,8 @@
                             }
                           },
                           "range": [
-                            498,
-                            587
+                            500,
+                            589
                           ],
                           "loc": {
                             "start": {
@@ -622,8 +622,8 @@
                           }
                         },
                         "range": [
-                          478,
-                          588
+                          480,
+                          590
                         ],
                         "loc": {
                           "start": {
@@ -637,8 +637,8 @@
                         }
                       },
                       "range": [
-                        471,
-                        591
+                        473,
+                        593
                       ],
                       "loc": {
                         "start": {
@@ -653,8 +653,8 @@
                     }
                   ],
                   "range": [
-                    465,
-                    592
+                    467,
+                    594
                   ],
                   "loc": {
                     "start": {
@@ -670,8 +670,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  462,
-                  592
+                  464,
+                  594
                 ],
                 "loc": {
                   "start": {
@@ -687,8 +687,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                448,
-                592
+                450,
+                594
               ],
               "loc": {
                 "start": {
@@ -705,8 +705,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns the current Trek environment\n   *\n   * @example\n   *  Trek.env\n   *  // => development | production | test\n   *\n   * @static\n   * @default 'development'\n   * @returns {Boolean}\n   ",
                   "range": [
-                    246,
-                    445
+                    248,
+                    447
                   ],
                   "loc": {
                     "start": {
@@ -725,8 +725,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    596,
-                    704
+                    598,
+                    706
                   ],
                   "loc": {
                     "start": {
@@ -748,8 +748,8 @@
                 "type": "Identifier",
                 "name": "isProduction",
                 "range": [
-                  718,
-                  730
+                  720,
+                  732
                 ],
                 "loc": {
                   "start": {
@@ -780,8 +780,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              746,
-                              750
+                              748,
+                              752
                             ],
                             "loc": {
                               "start": {
@@ -798,8 +798,8 @@
                             "type": "Identifier",
                             "name": "env",
                             "range": [
-                              751,
-                              754
+                              753,
+                              756
                             ],
                             "loc": {
                               "start": {
@@ -813,8 +813,8 @@
                             }
                           },
                           "range": [
-                            746,
-                            754
+                            748,
+                            756
                           ],
                           "loc": {
                             "start": {
@@ -832,8 +832,8 @@
                           "value": "production",
                           "raw": "'production'",
                           "range": [
-                            759,
-                            771
+                            761,
+                            773
                           ],
                           "loc": {
                             "start": {
@@ -847,8 +847,8 @@
                           }
                         },
                         "range": [
-                          746,
-                          771
+                          748,
+                          773
                         ],
                         "loc": {
                           "start": {
@@ -862,8 +862,8 @@
                         }
                       },
                       "range": [
-                        739,
-                        774
+                        741,
+                        776
                       ],
                       "loc": {
                         "start": {
@@ -878,8 +878,8 @@
                     }
                   ],
                   "range": [
-                    733,
-                    775
+                    735,
+                    777
                   ],
                   "loc": {
                     "start": {
@@ -895,8 +895,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  730,
-                  775
+                  732,
+                  777
                 ],
                 "loc": {
                   "start": {
@@ -912,8 +912,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                707,
-                775
+                709,
+                777
               ],
               "loc": {
                 "start": {
@@ -930,8 +930,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    596,
-                    704
+                    598,
+                    706
                   ],
                   "loc": {
                     "start": {
@@ -950,8 +950,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    779,
-                    888
+                    781,
+                    890
                   ],
                   "loc": {
                     "start": {
@@ -973,8 +973,8 @@
                 "type": "Identifier",
                 "name": "isDevelopment",
                 "range": [
-                  902,
-                  915
+                  904,
+                  917
                 ],
                 "loc": {
                   "start": {
@@ -1005,8 +1005,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              931,
-                              935
+                              933,
+                              937
                             ],
                             "loc": {
                               "start": {
@@ -1023,8 +1023,8 @@
                             "type": "Identifier",
                             "name": "env",
                             "range": [
-                              936,
-                              939
+                              938,
+                              941
                             ],
                             "loc": {
                               "start": {
@@ -1038,8 +1038,8 @@
                             }
                           },
                           "range": [
-                            931,
-                            939
+                            933,
+                            941
                           ],
                           "loc": {
                             "start": {
@@ -1057,8 +1057,8 @@
                           "value": "development",
                           "raw": "'development'",
                           "range": [
-                            944,
-                            957
+                            946,
+                            959
                           ],
                           "loc": {
                             "start": {
@@ -1072,8 +1072,8 @@
                           }
                         },
                         "range": [
-                          931,
-                          957
+                          933,
+                          959
                         ],
                         "loc": {
                           "start": {
@@ -1087,8 +1087,8 @@
                         }
                       },
                       "range": [
-                        924,
-                        960
+                        926,
+                        962
                       ],
                       "loc": {
                         "start": {
@@ -1103,8 +1103,8 @@
                     }
                   ],
                   "range": [
-                    918,
-                    961
+                    920,
+                    963
                   ],
                   "loc": {
                     "start": {
@@ -1120,8 +1120,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  915,
-                  961
+                  917,
+                  963
                 ],
                 "loc": {
                   "start": {
@@ -1137,8 +1137,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                891,
-                961
+                893,
+                963
               ],
               "loc": {
                 "start": {
@@ -1155,8 +1155,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    779,
-                    888
+                    781,
+                    890
                   ],
                   "loc": {
                     "start": {
@@ -1175,8 +1175,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    965,
-                    1067
+                    967,
+                    1069
                   ],
                   "loc": {
                     "start": {
@@ -1198,8 +1198,8 @@
                 "type": "Identifier",
                 "name": "isTest",
                 "range": [
-                  1081,
-                  1087
+                  1083,
+                  1089
                 ],
                 "loc": {
                   "start": {
@@ -1230,8 +1230,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              1103,
-                              1107
+                              1105,
+                              1109
                             ],
                             "loc": {
                               "start": {
@@ -1248,8 +1248,8 @@
                             "type": "Identifier",
                             "name": "env",
                             "range": [
-                              1108,
-                              1111
+                              1110,
+                              1113
                             ],
                             "loc": {
                               "start": {
@@ -1263,8 +1263,8 @@
                             }
                           },
                           "range": [
-                            1103,
-                            1111
+                            1105,
+                            1113
                           ],
                           "loc": {
                             "start": {
@@ -1282,8 +1282,8 @@
                           "value": "test",
                           "raw": "'test'",
                           "range": [
-                            1116,
-                            1122
+                            1118,
+                            1124
                           ],
                           "loc": {
                             "start": {
@@ -1297,8 +1297,8 @@
                           }
                         },
                         "range": [
-                          1103,
-                          1122
+                          1105,
+                          1124
                         ],
                         "loc": {
                           "start": {
@@ -1312,8 +1312,8 @@
                         }
                       },
                       "range": [
-                        1096,
-                        1125
+                        1098,
+                        1127
                       ],
                       "loc": {
                         "start": {
@@ -1328,8 +1328,8 @@
                     }
                   ],
                   "range": [
-                    1090,
-                    1126
+                    1092,
+                    1128
                   ],
                   "loc": {
                     "start": {
@@ -1345,8 +1345,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  1087,
-                  1126
+                  1089,
+                  1128
                 ],
                 "loc": {
                   "start": {
@@ -1362,8 +1362,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                1070,
-                1126
+                1072,
+                1128
               ],
               "loc": {
                 "start": {
@@ -1380,8 +1380,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
                   "range": [
-                    965,
-                    1067
+                    967,
+                    1069
                   ],
                   "loc": {
                     "start": {
@@ -1400,8 +1400,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
                   "range": [
-                    1130,
-                    1218
+                    1132,
+                    1220
                   ],
                   "loc": {
                     "start": {
@@ -1423,8 +1423,8 @@
                 "type": "Identifier",
                 "name": "package",
                 "range": [
-                  1232,
-                  1239
+                  1234,
+                  1241
                 ],
                 "loc": {
                   "start": {
@@ -1452,8 +1452,8 @@
                           "type": "Identifier",
                           "name": "require",
                           "range": [
-                            1255,
-                            1262
+                            1257,
+                            1264
                           ],
                           "loc": {
                             "start": {
@@ -1472,8 +1472,8 @@
                             "value": "../package",
                             "raw": "'../package'",
                             "range": [
-                              1263,
-                              1275
+                              1265,
+                              1277
                             ],
                             "loc": {
                               "start": {
@@ -1488,8 +1488,8 @@
                           }
                         ],
                         "range": [
-                          1255,
-                          1276
+                          1257,
+                          1278
                         ],
                         "loc": {
                           "start": {
@@ -1503,8 +1503,8 @@
                         }
                       },
                       "range": [
-                        1248,
-                        1279
+                        1250,
+                        1281
                       ],
                       "loc": {
                         "start": {
@@ -1519,8 +1519,8 @@
                     }
                   ],
                   "range": [
-                    1242,
-                    1280
+                    1244,
+                    1282
                   ],
                   "loc": {
                     "start": {
@@ -1536,8 +1536,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  1239,
-                  1280
+                  1241,
+                  1282
                 ],
                 "loc": {
                   "start": {
@@ -1553,8 +1553,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                1221,
-                1280
+                1223,
+                1282
               ],
               "loc": {
                 "start": {
@@ -1571,8 +1571,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
                   "range": [
-                    1130,
-                    1218
+                    1132,
+                    1220
                   ],
                   "loc": {
                     "start": {
@@ -1591,8 +1591,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
                   "range": [
-                    1284,
-                    1368
+                    1286,
+                    1370
                   ],
                   "loc": {
                     "start": {
@@ -1614,8 +1614,8 @@
                 "type": "Identifier",
                 "name": "version",
                 "range": [
-                  1382,
-                  1389
+                  1384,
+                  1391
                 ],
                 "loc": {
                   "start": {
@@ -1646,8 +1646,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              1405,
-                              1409
+                              1407,
+                              1411
                             ],
                             "loc": {
                               "start": {
@@ -1664,8 +1664,8 @@
                             "type": "Identifier",
                             "name": "package",
                             "range": [
-                              1410,
-                              1417
+                              1412,
+                              1419
                             ],
                             "loc": {
                               "start": {
@@ -1679,8 +1679,8 @@
                             }
                           },
                           "range": [
-                            1405,
-                            1417
+                            1407,
+                            1419
                           ],
                           "loc": {
                             "start": {
@@ -1697,8 +1697,8 @@
                           "type": "Identifier",
                           "name": "version",
                           "range": [
-                            1418,
-                            1425
+                            1420,
+                            1427
                           ],
                           "loc": {
                             "start": {
@@ -1712,8 +1712,8 @@
                           }
                         },
                         "range": [
-                          1405,
-                          1425
+                          1407,
+                          1427
                         ],
                         "loc": {
                           "start": {
@@ -1727,8 +1727,8 @@
                         }
                       },
                       "range": [
-                        1398,
-                        1428
+                        1400,
+                        1430
                       ],
                       "loc": {
                         "start": {
@@ -1743,8 +1743,8 @@
                     }
                   ],
                   "range": [
-                    1392,
-                    1429
+                    1394,
+                    1431
                   ],
                   "loc": {
                     "start": {
@@ -1760,8 +1760,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  1389,
-                  1429
+                  1391,
+                  1431
                 ],
                 "loc": {
                   "start": {
@@ -1777,8 +1777,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                1371,
-                1429
+                1373,
+                1431
               ],
               "loc": {
                 "start": {
@@ -1795,8 +1795,8 @@
                   "type": "Block",
                   "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
                   "range": [
-                    1284,
-                    1368
+                    1286,
+                    1370
                   ],
                   "loc": {
                     "start": {
@@ -1815,8 +1815,8 @@
                   "type": "Block",
                   "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
                   "range": [
-                    1433,
-                    1515
+                    1435,
+                    1517
                   ],
                   "loc": {
                     "start": {
@@ -1838,8 +1838,8 @@
                 "type": "Identifier",
                 "name": "logger",
                 "range": [
-                  1529,
-                  1535
+                  1531,
+                  1537
                 ],
                 "loc": {
                   "start": {
@@ -1880,8 +1880,8 @@
                                   "type": "Identifier",
                                   "name": "winston",
                                   "range": [
-                                    1544,
-                                    1551
+                                    1546,
+                                    1553
                                   ],
                                   "loc": {
                                     "start": {
@@ -1898,8 +1898,8 @@
                                   "type": "Identifier",
                                   "name": "default",
                                   "range": [
-                                    1552,
-                                    1559
+                                    1554,
+                                    1561
                                   ],
                                   "loc": {
                                     "start": {
@@ -1913,8 +1913,8 @@
                                   }
                                 },
                                 "range": [
-                                  1544,
-                                  1559
+                                  1546,
+                                  1561
                                 ],
                                 "loc": {
                                   "start": {
@@ -1931,8 +1931,8 @@
                                 "type": "Identifier",
                                 "name": "transports",
                                 "range": [
-                                  1560,
-                                  1570
+                                  1562,
+                                  1572
                                 ],
                                 "loc": {
                                   "start": {
@@ -1946,8 +1946,8 @@
                                 }
                               },
                               "range": [
-                                1544,
-                                1570
+                                1546,
+                                1572
                               ],
                               "loc": {
                                 "start": {
@@ -1964,8 +1964,8 @@
                               "type": "Identifier",
                               "name": "console",
                               "range": [
-                                1571,
-                                1578
+                                1573,
+                                1580
                               ],
                               "loc": {
                                 "start": {
@@ -1979,8 +1979,8 @@
                               }
                             },
                             "range": [
-                              1544,
-                              1578
+                              1546,
+                              1580
                             ],
                             "loc": {
                               "start": {
@@ -1997,8 +1997,8 @@
                             "type": "Identifier",
                             "name": "label",
                             "range": [
-                              1579,
-                              1584
+                              1581,
+                              1586
                             ],
                             "loc": {
                               "start": {
@@ -2012,8 +2012,8 @@
                             }
                           },
                           "range": [
-                            1544,
-                            1584
+                            1546,
+                            1586
                           ],
                           "loc": {
                             "start": {
@@ -2031,8 +2031,8 @@
                           "value": "Trek",
                           "raw": "'Trek'",
                           "range": [
-                            1587,
-                            1593
+                            1589,
+                            1595
                           ],
                           "loc": {
                             "start": {
@@ -2046,8 +2046,8 @@
                           }
                         },
                         "range": [
-                          1544,
-                          1593
+                          1546,
+                          1595
                         ],
                         "loc": {
                           "start": {
@@ -2061,8 +2061,8 @@
                         }
                       },
                       "range": [
-                        1544,
-                        1598
+                        1546,
+                        1600
                       ],
                       "loc": {
                         "start": {
@@ -2086,8 +2086,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              1605,
-                              1609
+                              1607,
+                              1611
                             ],
                             "loc": {
                               "start": {
@@ -2104,8 +2104,8 @@
                             "type": "Identifier",
                             "name": "_logger",
                             "range": [
-                              1610,
-                              1617
+                              1612,
+                              1619
                             ],
                             "loc": {
                               "start": {
@@ -2119,8 +2119,8 @@
                             }
                           },
                           "range": [
-                            1605,
-                            1617
+                            1607,
+                            1619
                           ],
                           "loc": {
                             "start": {
@@ -2142,8 +2142,8 @@
                             "object": {
                               "type": "ThisExpression",
                               "range": [
-                                1622,
-                                1626
+                                1624,
+                                1628
                               ],
                               "loc": {
                                 "start": {
@@ -2160,8 +2160,8 @@
                               "type": "Identifier",
                               "name": "_logger",
                               "range": [
-                                1627,
-                                1634
+                                1629,
+                                1636
                               ],
                               "loc": {
                                 "start": {
@@ -2175,8 +2175,8 @@
                               }
                             },
                             "range": [
-                              1622,
-                              1634
+                              1624,
+                              1636
                             ],
                             "loc": {
                               "start": {
@@ -2198,8 +2198,8 @@
                                 "type": "Identifier",
                                 "name": "winston",
                                 "range": [
-                                  1637,
-                                  1644
+                                  1639,
+                                  1646
                                 ],
                                 "loc": {
                                   "start": {
@@ -2216,8 +2216,8 @@
                                 "type": "Identifier",
                                 "name": "cli",
                                 "range": [
-                                  1645,
-                                  1648
+                                  1647,
+                                  1650
                                 ],
                                 "loc": {
                                   "start": {
@@ -2231,8 +2231,8 @@
                                 }
                               },
                               "range": [
-                                1637,
-                                1648
+                                1639,
+                                1650
                               ],
                               "loc": {
                                 "start": {
@@ -2247,8 +2247,8 @@
                             },
                             "arguments": [],
                             "range": [
-                              1637,
-                              1650
+                              1639,
+                              1652
                             ],
                             "loc": {
                               "start": {
@@ -2262,8 +2262,8 @@
                             }
                           },
                           "range": [
-                            1622,
-                            1650
+                            1624,
+                            1652
                           ],
                           "loc": {
                             "start": {
@@ -2277,8 +2277,8 @@
                           }
                         },
                         "range": [
-                          1605,
-                          1651
+                          1607,
+                          1653
                         ],
                         "loc": {
                           "start": {
@@ -2292,8 +2292,8 @@
                         }
                       },
                       "range": [
-                        1598,
-                        1654
+                        1600,
+                        1656
                       ],
                       "loc": {
                         "start": {
@@ -2308,8 +2308,8 @@
                     }
                   ],
                   "range": [
-                    1538,
-                    1655
+                    1540,
+                    1657
                   ],
                   "loc": {
                     "start": {
@@ -2325,8 +2325,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  1535,
-                  1655
+                  1537,
+                  1657
                 ],
                 "loc": {
                   "start": {
@@ -2342,8 +2342,8 @@
               "kind": "get",
               "computed": false,
               "range": [
-                1518,
-                1655
+                1520,
+                1657
               ],
               "loc": {
                 "start": {
@@ -2360,8 +2360,8 @@
                   "type": "Block",
                   "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
                   "range": [
-                    1433,
-                    1515
+                    1435,
+                    1517
                   ],
                   "loc": {
                     "start": {
@@ -2380,8 +2380,8 @@
                   "type": "Block",
                   "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
                   "range": [
-                    1659,
-                    1759
+                    1661,
+                    1761
                   ],
                   "loc": {
                     "start": {
@@ -2403,8 +2403,8 @@
                 "type": "Identifier",
                 "name": "logger",
                 "range": [
-                  1773,
-                  1779
+                  1775,
+                  1781
                 ],
                 "loc": {
                   "start": {
@@ -2425,8 +2425,8 @@
                     "type": "Identifier",
                     "name": "logger",
                     "range": [
-                      1780,
-                      1786
+                      1782,
+                      1788
                     ],
                     "loc": {
                       "start": {
@@ -2454,8 +2454,8 @@
                           "object": {
                             "type": "ThisExpression",
                             "range": [
-                              1794,
-                              1798
+                              1796,
+                              1800
                             ],
                             "loc": {
                               "start": {
@@ -2472,8 +2472,8 @@
                             "type": "Identifier",
                             "name": "_logger",
                             "range": [
-                              1799,
-                              1806
+                              1801,
+                              1808
                             ],
                             "loc": {
                               "start": {
@@ -2487,8 +2487,8 @@
                             }
                           },
                           "range": [
-                            1794,
-                            1806
+                            1796,
+                            1808
                           ],
                           "loc": {
                             "start": {
@@ -2505,8 +2505,8 @@
                           "type": "Identifier",
                           "name": "logger",
                           "range": [
-                            1809,
-                            1815
+                            1811,
+                            1817
                           ],
                           "loc": {
                             "start": {
@@ -2520,8 +2520,8 @@
                           }
                         },
                         "range": [
-                          1794,
-                          1815
+                          1796,
+                          1817
                         ],
                         "loc": {
                           "start": {
@@ -2535,8 +2535,8 @@
                         }
                       },
                       "range": [
-                        1794,
-                        1818
+                        1796,
+                        1820
                       ],
                       "loc": {
                         "start": {
@@ -2551,8 +2551,8 @@
                     }
                   ],
                   "range": [
-                    1788,
-                    1819
+                    1790,
+                    1821
                   ],
                   "loc": {
                     "start": {
@@ -2568,8 +2568,8 @@
                 "generator": false,
                 "expression": false,
                 "range": [
-                  1779,
-                  1819
+                  1781,
+                  1821
                 ],
                 "loc": {
                   "start": {
@@ -2585,8 +2585,8 @@
               "kind": "set",
               "computed": false,
               "range": [
-                1762,
-                1819
+                1764,
+                1821
               ],
               "loc": {
                 "start": {
@@ -2603,8 +2603,8 @@
                   "type": "Block",
                   "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
                   "range": [
-                    1659,
-                    1759
+                    1661,
+                    1761
                   ],
                   "loc": {
                     "start": {
@@ -2622,8 +2622,8 @@
             }
           ],
           "range": [
-            241,
-            1822
+            243,
+            1824
           ],
           "loc": {
             "start": {
@@ -2637,8 +2637,8 @@
           }
         },
         "range": [
-          215,
-          1822
+          217,
+          1824
         ],
         "loc": {
           "start": {
@@ -2653,10 +2653,10 @@
         "leadingComments": [
           {
             "type": "Block",
-            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+            "value": "*\n * Construct a Trek (app) instance\n *\n * @extends {Engine}\n ",
             "range": [
               134,
-              198
+              200
             ],
             "loc": {
               "start": {
@@ -2673,8 +2673,8 @@
         "trailingComments": []
       },
       "range": [
-        200,
-        1822
+        202,
+        1824
       ],
       "loc": {
         "start": {
@@ -2689,10 +2689,10 @@
       "leadingComments": [
         {
           "type": "Block",
-          "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+          "value": "*\n * Construct a Trek (app) instance\n *\n * @extends {Engine}\n ",
           "range": [
             134,
-            198
+            200
           ],
           "loc": {
             "start": {
@@ -2719,8 +2719,8 @@
             "type": "Identifier",
             "name": "global",
             "range": [
-              1829,
-              1835
+              1831,
+              1837
             ],
             "loc": {
               "start": {
@@ -2737,8 +2737,8 @@
             "type": "Identifier",
             "name": "Trek",
             "range": [
-              1836,
-              1840
+              1838,
+              1842
             ],
             "loc": {
               "start": {
@@ -2752,8 +2752,8 @@
             }
           },
           "range": [
-            1829,
-            1840
+            1831,
+            1842
           ],
           "loc": {
             "start": {
@@ -2768,8 +2768,8 @@
         },
         "prefix": true,
         "range": [
-          1828,
-          1840
+          1830,
+          1842
         ],
         "loc": {
           "start": {
@@ -2797,8 +2797,8 @@
                   "type": "Identifier",
                   "name": "global",
                   "range": [
-                    1907,
-                    1913
+                    1909,
+                    1915
                   ],
                   "loc": {
                     "start": {
@@ -2815,8 +2815,8 @@
                   "type": "Identifier",
                   "name": "Trek",
                   "range": [
-                    1914,
-                    1918
+                    1916,
+                    1920
                   ],
                   "loc": {
                     "start": {
@@ -2830,8 +2830,8 @@
                   }
                 },
                 "range": [
-                  1907,
-                  1918
+                  1909,
+                  1920
                 ],
                 "loc": {
                   "start": {
@@ -2848,8 +2848,8 @@
                 "type": "Identifier",
                 "name": "Trek",
                 "range": [
-                  1921,
-                  1925
+                  1923,
+                  1927
                 ],
                 "loc": {
                   "start": {
@@ -2863,8 +2863,8 @@
                 }
               },
               "range": [
-                1907,
-                1925
+                1909,
+                1927
               ],
               "loc": {
                 "start": {
@@ -2878,8 +2878,8 @@
               }
             },
             "range": [
-              1907,
-              1926
+              1909,
+              1928
             ],
             "loc": {
               "start": {
@@ -2896,8 +2896,8 @@
                 "type": "Block",
                 "value": "*\n   * Puts `Trek` to the global\n   *\n   * @global\n   ",
                 "range": [
-                  1846,
-                  1904
+                  1848,
+                  1906
                 ],
                 "loc": {
                   "start": {
@@ -2914,8 +2914,8 @@
           }
         ],
         "range": [
-          1842,
-          1927
+          1844,
+          1929
         ],
         "loc": {
           "start": {
@@ -2930,8 +2930,8 @@
       },
       "alternate": null,
       "range": [
-        1824,
-        1927
+        1826,
+        1929
       ],
       "loc": {
         "start": {
@@ -2948,7 +2948,7 @@
   "sourceType": "module",
   "range": [
     73,
-    1927
+    1929
   ],
   "loc": {
     "start": {
@@ -2981,10 +2981,10 @@
     },
     {
       "type": "Block",
-      "value": "*\n * Construct a Trek (app) instance\n *\n * @extends Engine\n ",
+      "value": "*\n * Construct a Trek (app) instance\n *\n * @extends {Engine}\n ",
       "range": [
         134,
-        198
+        200
       ],
       "loc": {
         "start": {
@@ -3001,8 +3001,8 @@
       "type": "Block",
       "value": "*\n   * Returns the current Trek environment\n   *\n   * @example\n   *  Trek.env\n   *  // => development | production | test\n   *\n   * @static\n   * @default 'development'\n   * @returns {Boolean}\n   ",
       "range": [
-        246,
-        445
+        248,
+        447
       ],
       "loc": {
         "start": {
@@ -3019,8 +3019,8 @@
       "type": "Block",
       "value": "*\n   * Returns true if current environment is `production`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
       "range": [
-        596,
-        704
+        598,
+        706
       ],
       "loc": {
         "start": {
@@ -3037,8 +3037,8 @@
       "type": "Block",
       "value": "*\n   * Returns true if current environment is `development`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
       "range": [
-        779,
-        888
+        781,
+        890
       ],
       "loc": {
         "start": {
@@ -3055,8 +3055,8 @@
       "type": "Block",
       "value": "*\n   * Returns true if current environment is `test`\n   *\n   * @static\n   * @returns {Boolean}\n   ",
       "range": [
-        965,
-        1067
+        967,
+        1069
       ],
       "loc": {
         "start": {
@@ -3073,8 +3073,8 @@
       "type": "Block",
       "value": "*\n   * Returns Trek package information\n   *\n   * @static\n   * @returns {Object}\n   ",
       "range": [
-        1130,
-        1218
+        1132,
+        1220
       ],
       "loc": {
         "start": {
@@ -3091,8 +3091,8 @@
       "type": "Block",
       "value": "*\n   * Returns Trek current version\n   *\n   * @static\n   * @returns {String}\n   ",
       "range": [
-        1284,
-        1368
+        1286,
+        1370
       ],
       "loc": {
         "start": {
@@ -3109,8 +3109,8 @@
       "type": "Block",
       "value": "*\n   * Gets Trek's logger\n   *\n   * @static\n   * @returns {winston.Logger}\n   ",
       "range": [
-        1433,
-        1515
+        1435,
+        1517
       ],
       "loc": {
         "start": {
@@ -3127,8 +3127,8 @@
       "type": "Block",
       "value": "*\n   * Sets Trek's logger\n   *\n   * @static\n   * @param {Object} logger\n   * @returns {void}\n   ",
       "range": [
-        1659,
-        1759
+        1661,
+        1761
       ],
       "loc": {
         "start": {
@@ -3145,8 +3145,8 @@
       "type": "Block",
       "value": "*\n   * Puts `Trek` to the global\n   *\n   * @global\n   ",
       "range": [
-        1846,
-        1904
+        1848,
+        1906
       ],
       "loc": {
         "start": {
