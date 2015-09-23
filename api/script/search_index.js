@@ -367,31 +367,31 @@ window.esdocSearchIndex = [
   ],
   [
     "",
-    "test-file/test/Config.test.js.html#lineNumber15",
+    "test-file/test/Config.test.js.html#lineNumber17",
     "Config #get()",
     "test"
   ],
   [
     "",
-    "test-file/test/Config.test.js.html#lineNumber16",
+    "test-file/test/Config.test.js.html#lineNumber18",
     "Config #get() should return $PATH from env",
     "test"
   ],
   [
     "",
-    "test-file/test/Config.test.js.html#lineNumber21",
-    "Config #get() should return a secret key from secrets.js",
+    "test-file/test/Config.test.js.html#lineNumber23",
+    "Config #get() should return a secret key from secrets.yml",
     "test"
   ],
   [
     "",
-    "test-file/test/Config.test.js.html#lineNumber27",
+    "test-file/test/Config.test.js.html#lineNumber29",
     "Config #set()",
     "test"
   ],
   [
     "",
-    "test-file/test/Config.test.js.html#lineNumber28",
+    "test-file/test/Config.test.js.html#lineNumber30",
     "Config #set() should return new value when reseting",
     "test"
   ],

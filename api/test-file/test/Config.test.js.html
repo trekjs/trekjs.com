@@ -48,9 +48,11 @@ import Config from &apos;../src/Config&apos;
 
 describe(&apos;Config&apos;, () =&gt; {
 
-  var config = new Config(__dirname + &apos;/fixtures&apos;)
+  var config
+
   before(() =&gt; {
     return co(function *() {
+      config = new Config(__dirname + &apos;/fixtures&apos;)
       yield config.load()
     })
   })
@@ -61,7 +63,7 @@ describe(&apos;Config&apos;, () =&gt; {
       assert(config.get(&apos;PORT&apos;) === 377)
     })
 
-    it(&apos;should return a secret key from secrets.js&apos;, () =&gt; {
+    it(&apos;should return a secret key from secrets.yml&apos;, () =&gt; {
       assert(config.get(&apos;secrets.secret_key&apos;) === &apos;Oabah4p&apos;)
     })
 

@@ -9,7 +9,7 @@
     "access": null,
     "description": null,
     "lineNumber": 7,
-    "content": "/*!\n * trek - Config\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { extname} from 'path'\nimport { readFile } from 'mz/fs'\nimport { Env, Memory } from 'nconf'\nimport chalk from 'chalk'\nimport dotenv from 'dotenv'\nimport templatly from 'templatly'\nimport Paths from './Paths'\nimport Parsers from './Parsers'\n\n/**\n * The app's configuration\n */\nexport default class Config {\n\n  /**\n   * @param {String} root The app's root path\n   * @param {String} [separator='.'] The keypath separator\n   */\n  constructor(root, separator = '.') {\n    this.root = root\n    this.separator = separator\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this.parsers = Parsers\n    this.paths = new Paths(this.root)\n    // init stores\n    this.stores = new Map()\n    // init list\n    this.list = [\n      // key, namespace, init store, enable/disable namespace, env\n      ['config/database', 'database', null, true, Trek.env],\n      ['config/secrets', 'secrets', null, true, Trek.env],\n      ['config/app.env', 'user'], // app.${Trek.env}\n      ['config/app', 'global'],\n      ['config/.env', 'env', new Env()], // .env.${Trek.env}\n    ]\n  }\n\n  /**\n   * Load dotenv `.env.{development|test|production}`\n   *\n   * @returns {void}\n   */\n  dotenv() {\n    let env = this.paths.get('config/.env') // .env.${Trek.env}\n    let existed = !!env\n    let loaded = false\n    if (existed) {\n      loaded = dotenv.config({\n        path: `${this.root}/${env}`,\n        silent: true\n      })\n    }\n    env = env || this.paths.getPattern('config/.env')\n    if (loaded) Trek.logger.debug('Loaded environment variables from %s to %s.', chalk.green(env), chalk.gray('process.env'))\n    else Trek.logger.warn('Missing %s dotenv file or parse failed.', chalk.red(env))\n  }\n\n  /**\n   * Load app.toml app.{development|test|production}.toml\n   *\n   * @returns {void}\n   */\n  *loadList() {\n    let tmp = []\n\n    for (let item of this.list) {\n      let [k, t, nc, n, e] = item\n      let p = this.paths.get(k)\n      let [existed, loaded, err] = [!!(p || nc), true, null]\n      if (existed) {\n        try {\n          let s = nc || (yield this.compile(`${this.root}/${p}`, n ? t : null, e))\n          this.stores.set(t, s)\n        } catch (e) {\n          err = e\n          loaded = false\n        }\n      }\n      tmp.unshift({\n        pattern: this.paths.getPattern(k),\n        filename: p,\n        loaded: existed & loaded,\n        error: err,\n        namespace: t\n      })\n    }\n\n    for (let [k, s] of this.stores.entries()) {\n      s.loadSync()\n    }\n\n    tmp.forEach((e) => {\n      let {\n        pattern, filename, loaded, error, namespace\n      } = e\n      filename = (namespace === 'env' ? 'process.env': filename) || pattern\n      if (loaded) Trek.logger.debug('Loaded %s.', chalk.green(filename))\n      else Trek.logger.warn('Missing %s or parse failed, %s.', chalk.red(filename), chalk.red(error))\n    })\n  }\n\n  /**\n   * Load dotenv and app config files\n   *\n   * @returns {void}\n   */\n  *load() {\n    // first, load dotenv\n    this.dotenv()\n    // second, load list\n    yield this.loadList()\n  }\n\n  /**\n   * Use templatly to render thie file, then parse file to Memory\n   *\n   * @param {String} filename The file path\n   * @param {String} namespace Set a namespace for current store\n   * @param {String} env\n   * @returns {nconf.Memory}\n   */\n  *compile(filename, namespace, env) {\n    let content = yield this.render(filename)\n    let data = this.parse(content, filename)\n    let memory = new Memory({\n      logicalSeparator: this.separator\n    })\n    // select env\n    if (env) {\n      data = data[env] || data\n    }\n    // add namespace for data\n    if (namespace) {\n      data = {\n        [namespace]: data\n      }\n    }\n    memory.store = data || Object.create(null)\n    return memory\n  }\n\n  /**\n   * First, uses native `template-strings` for rendering configuration file\n   *\n   * @returns {String} The rendered template strings\n   */\n  *render(filename, locals = Object.create(null)) {\n    let content = yield readFile(filename, 'utf-8')\n    Object.assign(locals, {\n      env: process.env,\n      config: this\n    })\n    return templatly(content, locals)\n  }\n\n  /**\n   * Parse the file from `.js`, `.json`, `.toml`, `.yml`\n   *\n   * @param {String} content The file raw content\n   * @param {String} filename The file path\n   * @returns {nconf.Memory}\n   */\n  parse(content, filename) {\n    let ext = extname(filename).substring(1)\n    // parser\n    let p = this.parsers[ext]\n    if (!p) return Object.create(null)\n    return p.parse(content, filename)\n  }\n\n  /**\n   * Get value by key from Config\n   *\n   *  search: env -> user -> global\n   *\n   * @param {String} key\n   * @param {Mixed} [defaultValue]\n   * @returns {Mixed}\n   */\n  get(key, defaultValue) {\n    let value\n    for (let s of this.stores.values()) {\n      value = s.get(key)\n      if (value) return value\n    }\n    return defaultValue\n  }\n\n  /**\n   * Set value by key onto Config\n   *\n   * @param {String} key\n   * @param {Mixed} value\n   * @param {String} [type='user'] The namespace\n   * @returns {void}\n   */\n  set(key, value, type = 'user') {\n    if (this.stores.has(type)) {\n      this.stores.get(type).set(key, value)\n    }\n  }\n\n}\n"
+    "content": "/*!\n * trek - Config\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { extname} from 'path'\nimport { readFile } from 'mz/fs'\nimport { Env, Memory } from 'nconf'\nimport chalk from 'chalk'\nimport dotenv from 'dotenv'\nimport templatly from 'templatly'\nimport Paths from './Paths'\nimport Parsers from './Parsers'\n\n/**\n * The app's configuration\n *\n * @example\n *\n *  const config = new Config('./your-config-folder')\n */\nexport default class Config {\n\n  /**\n   * @param {String} root The app's root path\n   * @param {String} [separator='.'] The keypath separator\n   */\n  constructor(root, separator = '.') {\n    this.root = root\n    this.separator = separator\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this.parsers = Parsers\n    this.paths = new Paths(this.root)\n    // init stores\n    this.stores = new Map()\n    // init list\n    this.list = [\n      // key, namespace, init store, enable/disable namespace, env\n      ['config/database', 'database', null, true, Trek.env],\n      ['config/secrets', 'secrets', null, true, Trek.env],\n      ['config/app.env', 'user'], // app.${Trek.env}\n      ['config/app', 'global'],\n      ['config/.env', 'env', new Env()], // .env.${Trek.env}\n    ]\n  }\n\n  /**\n   * Load dotenv `.env.{development|test|production}`\n   *\n   * @example\n   *\n   *  config.dotenv()\n   *\n   * @returns {void}\n   */\n  dotenv() {\n    let env = this.paths.get('config/.env') // .env.${Trek.env}\n    let existed = !!env\n    let loaded = false\n    if (existed) {\n      loaded = dotenv.config({\n        path: `${this.root}/${env}`,\n        silent: true\n      })\n    }\n    env = env || this.paths.getPattern('config/.env')\n    if (loaded) Trek.logger.debug('Loaded environment variables from %s to %s.', chalk.green(env), chalk.gray('process.env'))\n    else Trek.logger.warn('Missing %s dotenv file or parse failed.', chalk.red(env))\n  }\n\n  /**\n   * Load app.toml app.{development|test|production}.toml\n   *\n   * @example\n   *\n   *  yield config.loadList()\n   *\n   * @returns {void}\n   */\n  *loadList() {\n    let tmp = []\n\n    for (let item of this.list) {\n      let [k, t, nc, n, e] = item\n      let p = this.paths.get(k)\n      let [existed, loaded, err] = [!!(p || nc), true, null]\n      if (existed) {\n        try {\n          let s = nc || (yield this.compile(`${this.root}/${p}`, n ? t : null, e))\n          this.stores.set(t, s)\n        } catch (e) {\n          err = e\n          loaded = false\n        }\n      }\n      tmp.unshift({\n        pattern: this.paths.getPattern(k),\n        filename: p,\n        loaded: existed & loaded,\n        error: err,\n        namespace: t\n      })\n    }\n\n    for (let [k, s] of this.stores.entries()) {\n      s.loadSync()\n    }\n\n    tmp.forEach((e) => {\n      let {\n        pattern, filename, loaded, error, namespace\n      } = e\n      filename = (namespace === 'env' ? 'process.env': filename) || pattern\n      if (loaded) Trek.logger.debug('Loaded %s.', chalk.green(filename))\n      else Trek.logger.warn('Missing %s or parse failed, %s.', chalk.red(filename), chalk.red(error))\n    })\n  }\n\n  /**\n   * Load dotenv and app config files\n   *\n   * @example\n   *\n   *  yield config.load()\n   *  // load steps\n   *  // 0. config.dotenv()\n   *  // 1. yield config.loadList()\n   *\n   * @returns {void}\n   */\n  *load() {\n    // first, load dotenv\n    this.dotenv()\n    // second, load list\n    yield this.loadList()\n  }\n\n  /**\n   * Use templatly to render thie file, then parse file to Memory\n   *\n   * @example\n   *\n   *  yield config.compile('./your-config.json', 'user', 'test')\n   *\n   * @param {String} filename The file path\n   * @param {String} namespace Set a namespace for current store\n   * @param {String} env Select env if you want\n   * @returns {nconf.Memory}\n   */\n  *compile(filename, namespace, env) {\n    let content = yield this.render(filename)\n    let data = this.parse(content, filename)\n    let memory = new Memory({\n      logicalSeparator: this.separator\n    })\n    // select env\n    if (env) {\n      data = data[env] || data\n    }\n    // add namespace for data\n    if (namespace) {\n      data = {\n        [namespace]: data\n      }\n    }\n    memory.store = data || Object.create(null)\n    return memory\n  }\n\n  /**\n   * First, uses native `template-strings` for rendering configuration file\n   *\n   * @example\n   *\n   *  yield config.render('./your-config.yml', { name: 'your-app-name' })\n   *\n   * @param {String} filename The config file path\n   * @param {Object} locals An object whose properties define local variables for the configuration\n   * @returns {String} The rendered template strings\n   */\n  *render(filename, locals = Object.create(null)) {\n    let content = yield readFile(filename, 'utf-8')\n    Object.assign(locals, {\n      env: process.env,\n      config: this\n    })\n    return templatly(content, locals)\n  }\n\n  /**\n   * Parse the file from `.js`, `.json`, `.toml`, `.yml` formatters.\n   *\n   * @example\n   *\n   *  config.parse(content, filename)\n   *\n   * @param {String} content The file raw content\n   * @param {String} filename The file path\n   * @returns {nconf.Memory}\n   */\n  parse(content, filename) {\n    let ext = extname(filename).substring(1)\n    // parser\n    let p = this.parsers[ext]\n    if (!p) return Object.create(null)\n    return p.parse(content, filename)\n  }\n\n  /**\n   * Assigns setting key to value\n   *\n   * @example\n   *\n   *  config.set('port', 8080)\n   *  config.set('app.name', 'trek')\n   *\n   * @param {String} key\n   * @param {*} value\n   * @param {String} [type='user'] The namespace is `user` by default\n   * @returns {Config} this\n   */\n  set(key, value, type = 'user') {\n    if (this.stores.has(type)) {\n      this.stores.get(type).set(key, value)\n    }\n    return this\n  }\n\n  /**\n   * Get value by key from Config\n   *\n   * @example\n   *\n   *  // search: env -> user -> global\n   *  config.get('host')\n   *  config.get('port', 80) // 80 by default\n   *\n   * @param {String} key\n   * @param {*} [defaultValue]\n   * @returns {*}\n   */\n  get(key, defaultValue) {\n    let value\n    for (let s of this.stores.values()) {\n      value = s.get(key)\n      if (value) return value\n    }\n    return defaultValue\n  }\n\n}\n"
   },
   {
     "kind": "class",
@@ -23,7 +23,10 @@
     "importPath": "trek/src/Config.js",
     "importStyle": "Config",
     "description": "The app's configuration",
-    "lineNumber": 19,
+    "examples": [
+      "\n const config = new Config('./your-config-folder')"
+    ],
+    "lineNumber": 23,
     "interface": false
   },
   {
@@ -35,7 +38,7 @@
     "longname": "src/Config.js~Config#constructor",
     "access": null,
     "description": null,
-    "lineNumber": 25,
+    "lineNumber": 29,
     "params": [
       {
         "nullable": null,
@@ -71,7 +74,7 @@
     "longname": "src/Config.js~Config#root",
     "access": null,
     "description": null,
-    "lineNumber": 26,
+    "lineNumber": 30,
     "undocument": true,
     "type": {
       "types": [
@@ -88,7 +91,7 @@
     "longname": "src/Config.js~Config#separator",
     "access": null,
     "description": null,
-    "lineNumber": 27,
+    "lineNumber": 31,
     "undocument": true,
     "type": {
       "types": [
@@ -105,7 +108,7 @@
     "longname": "src/Config.js~Config#initialize",
     "access": "private",
     "description": null,
-    "lineNumber": 34,
+    "lineNumber": 38,
     "params": [],
     "generator": false
   },
@@ -118,7 +121,7 @@
     "longname": "src/Config.js~Config#parsers",
     "access": null,
     "description": null,
-    "lineNumber": 35,
+    "lineNumber": 39,
     "undocument": true,
     "type": {
       "types": [
@@ -135,7 +138,7 @@
     "longname": "src/Config.js~Config#paths",
     "access": null,
     "description": null,
-    "lineNumber": 36,
+    "lineNumber": 40,
     "undocument": true,
     "type": {
       "types": [
@@ -152,7 +155,7 @@
     "longname": "src/Config.js~Config#stores",
     "access": null,
     "description": null,
-    "lineNumber": 38,
+    "lineNumber": 42,
     "undocument": true,
     "type": {
       "types": [
@@ -169,7 +172,7 @@
     "longname": "src/Config.js~Config#list",
     "access": null,
     "description": null,
-    "lineNumber": 40,
+    "lineNumber": 44,
     "undocument": true,
     "type": {
       "types": [
@@ -186,7 +189,10 @@
     "longname": "src/Config.js~Config#dotenv",
     "access": null,
     "description": "Load dotenv `.env.{development|test|production}`",
-    "lineNumber": 55,
+    "examples": [
+      "\n config.dotenv()"
+    ],
+    "lineNumber": 63,
     "unknown": [
       {
         "tagName": "@returns",
@@ -213,7 +219,10 @@
     "longname": "src/Config.js~Config#loadList",
     "access": null,
     "description": "Load app.toml app.{development|test|production}.toml",
-    "lineNumber": 75,
+    "examples": [
+      "\n yield config.loadList()"
+    ],
+    "lineNumber": 87,
     "unknown": [
       {
         "tagName": "@returns",
@@ -240,7 +249,10 @@
     "longname": "src/Config.js~Config#load",
     "access": null,
     "description": "Load dotenv and app config files",
-    "lineNumber": 119,
+    "examples": [
+      "\n yield config.load()\n // load steps\n // 0. config.dotenv()\n // 1. yield config.loadList()"
+    ],
+    "lineNumber": 138,
     "unknown": [
       {
         "tagName": "@returns",
@@ -267,7 +279,10 @@
     "longname": "src/Config.js~Config#compile",
     "access": null,
     "description": "Use templatly to render thie file, then parse file to Memory",
-    "lineNumber": 134,
+    "examples": [
+      "\n yield config.compile('./your-config.json', 'user', 'test')"
+    ],
+    "lineNumber": 157,
     "unknown": [
       {
         "tagName": "@returns",
@@ -303,7 +318,7 @@
         "spread": false,
         "optional": false,
         "name": "env",
-        "description": ""
+        "description": "Select env if you want"
       }
     ],
     "return": {
@@ -325,7 +340,10 @@
     "longname": "src/Config.js~Config#render",
     "access": null,
     "description": "First, uses native `template-strings` for rendering configuration file",
-    "lineNumber": 159,
+    "examples": [
+      "\n yield config.render('./your-config.yml', { name: 'your-app-name' })"
+    ],
+    "lineNumber": 188,
     "unknown": [
       {
         "tagName": "@returns",
@@ -334,17 +352,24 @@
     ],
     "params": [
       {
-        "name": "filename",
+        "nullable": null,
         "types": [
-          "*"
-        ]
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "filename",
+        "description": "The config file path"
       },
       {
-        "name": "locals",
-        "optional": true,
+        "nullable": null,
         "types": [
-          "*"
-        ]
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "locals",
+        "description": "An object whose properties define local variables for the configuration"
       }
     ],
     "return": {
@@ -365,8 +390,11 @@
     "memberof": "src/Config.js~Config",
     "longname": "src/Config.js~Config#parse",
     "access": null,
-    "description": "Parse the file from `.js`, `.json`, `.toml`, `.yml`",
-    "lineNumber": 175,
+    "description": "Parse the file from `.js`, `.json`, `.toml`, `.yml` formatters.",
+    "examples": [
+      "\n config.parse(content, filename)"
+    ],
+    "lineNumber": 208,
     "unknown": [
       {
         "tagName": "@returns",
@@ -409,64 +437,19 @@
     "kind": "method",
     "static": false,
     "variation": null,
-    "name": "get",
-    "memberof": "src/Config.js~Config",
-    "longname": "src/Config.js~Config#get",
-    "access": null,
-    "description": "Get value by key from Config\n\n search: env -> user -> global",
-    "lineNumber": 192,
-    "unknown": [
-      {
-        "tagName": "@returns",
-        "tagValue": "{Mixed}"
-      }
-    ],
-    "params": [
-      {
-        "nullable": null,
-        "types": [
-          "String"
-        ],
-        "spread": false,
-        "optional": false,
-        "name": "key",
-        "description": ""
-      },
-      {
-        "nullable": null,
-        "types": [
-          "Mixed"
-        ],
-        "spread": false,
-        "optional": true,
-        "name": "defaultValue",
-        "description": ""
-      }
-    ],
-    "return": {
-      "nullable": null,
-      "types": [
-        "Mixed"
-      ],
-      "spread": false,
-      "description": ""
-    },
-    "generator": false
-  },
-  {
-    "kind": "method",
-    "static": false,
-    "variation": null,
     "name": "set",
     "memberof": "src/Config.js~Config",
     "longname": "src/Config.js~Config#set",
     "access": null,
-    "description": "Set value by key onto Config",
-    "lineNumber": 209,
+    "description": "Assigns setting key to value",
+    "examples": [
+      "\n config.set('port', 8080)\n config.set('app.name', 'trek')"
+    ],
+    "lineNumber": 229,
     "unknown": [
       {
         "tagName": "@returns",
-        "tagValue": "{void}"
+        "tagValue": "{Config} this"
       }
     ],
     "params": [
@@ -483,7 +466,7 @@
       {
         "nullable": null,
         "types": [
-          "Mixed"
+          "*"
         ],
         "spread": false,
         "optional": false,
@@ -500,13 +483,64 @@
         "defaultValue": "'user'",
         "defaultRaw": "'user'",
         "name": "type",
-        "description": "The namespace"
+        "description": "The namespace is `user` by default"
       }
     ],
     "return": {
       "nullable": null,
       "types": [
-        "void"
+        "Config"
+      ],
+      "spread": false,
+      "description": "this"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Config.js~Config",
+    "longname": "src/Config.js~Config#get",
+    "access": null,
+    "description": "Get value by key from Config",
+    "examples": [
+      "\n // search: env -> user -> global\n config.get('host')\n config.get('port', 80) // 80 by default"
+    ],
+    "lineNumber": 249,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{*}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "*"
+        ],
+        "spread": false,
+        "optional": true,
+        "name": "defaultValue",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
       ],
       "spread": false,
       "description": ""
@@ -1040,7 +1074,7 @@
     "access": null,
     "description": null,
     "lineNumber": 7,
-    "content": "/*!\n * trek - Engine\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename, dirname, join } from 'path'\nimport serveStatic from 'koa-static'\nimport chalk from 'chalk'\nimport co from 'co'\nimport composition from 'composition'\nimport Koa from 'koa'\nimport Router from 'trek-router'\nimport RouteMapper from 'route-mapper'\nimport Config from './Config'\nimport Context from './Context'\nimport View from './View'\n\nconst METHODS = Router.METHODS\n\n/**\n * The Trek Engine Core\n * @extends Koa\n */\nexport default class Engine extends Koa {\n\n  /**\n   * @param {String} rootPath The app root path.\n   */\n  constructor(rootPath) {\n    super()\n    this.initialized = false\n    this.env = Trek.env\n    if (rootPath) this.rootPath = rootPath\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    // top-most app is mounted at /\n    this.mountpath = '/'\n    this.config = new Config(this.rootPath)\n    this.router = new Router()\n    // override context\n    this.context = new Context()\n    this.engines = new Map()\n    this.cache = Object.create(null)\n    this.state = Object.create(null)\n    this.state.config = this.config\n  }\n\n  /**\n   * Stores the `value` with `key` into `app.config`\n   *\n   * @returns {Engine} this\n   */\n  set(key, value) {\n    this.config.set(key, value)\n    return this;\n  }\n\n  /**\n   * Get the app prefix path\n   *\n   * @returns {String}\n   */\n  get path() {\n    return this.parent\n      ? this.parent.path + this.mountpath\n      : ''\n  }\n\n  /**\n   * Set a working `rootPath` directory for app\n   *\n   * @param {String} root path\n   */\n  set rootPath(rootPath) {\n    this._rootPath = rootPath\n  }\n\n  /**\n   * The app working `rootPath` directory\n   *\n   * @returns {String}\n   */\n  get rootPath() {\n    return this._rootPath || (this._rootPath = dirname(require.main.filename))\n  }\n\n  /**\n   * The `config.paths` delegation\n   *\n   * @returns {Paths} config.paths\n   */\n  get paths() {\n    return this.config.paths\n  }\n\n  /**\n   * The app `logger`\n   *\n   * @return {winston.Logger}\n   */\n  get logger() {\n    return this._logger || (this._logger = Object.create(Trek.logger))\n  }\n\n  /**\n   * Get all servides\n   *\n   * @return {Map} services\n   */\n  get services() {\n    return this._services || (this._services = new Map())\n  }\n\n  /**\n   * Get a service by key\n   *\n   * @param {String} key\n   * @return {Mixed} service\n   */\n  getService(key) {\n    return this.services.get(key)\n  }\n\n  /**\n   * Stores a service\n   *\n   * @param {String} key the service name\n   * @param {Mixed} service the service instance\n   * @returns {void}\n   */\n  setService(key, value) {\n    if (this.services.has(key)) {\n      this.logger.warn(chalk.green(`service:${key} was registed`))\n      return\n    }\n    this.logger.debug(chalk.yellow('service:%s'), key)\n    this.services.set(key, value)\n  }\n\n  /**\n   * Get route mapper.\n   *\n   * @return {RouteMapper} routeMapper\n   */\n  get routeMapper() {\n    return this._routeMapper || (this._routeMapper = new RouteMapper())\n  }\n\n  /**\n   * @private\n   */\n  loadRoutes() {\n    this.logger.debug(`Start load the routes.`)\n    let routesPath = this.paths.get('config/routes', true)\n    let controllersPath = this.paths.get('app/controllers', true)\n    try {\n      //require(routesPath).call(this.routeMapper, this.routeMapper)\n      this.routeMapper.draw(routesPath)\n      this.routeMapper.routes.forEach(r => {\n        let { controller, action } = r\n        let path = join(controllersPath, controller) + '.js'\n        let c = require(path)\n        r.verb.forEach((m) => {\n          let a\n          if (c && (a = c[action])) {\n            if (!Array.isArray(a)) a = [a]\n            this.logger.debug(m, r.as, r.path, controller, action)\n            this[m](r.path, ...a)\n          }\n        });\n      });\n    } catch (e) {\n      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)\n    }\n  }\n\n  /**\n   * Load default middleware stack\n   *\n   * @private\n   */\n  defaultMiddlewareStack() {\n    let stackPath = this.paths.get('config/middleware', true)\n    let existed = !!stackPath\n    let loaded = false\n    let err\n    if (existed) {\n      try {\n        require(stackPath)(this)\n        loaded = true\n      } catch (e) {\n        err = e\n      }\n    }\n    if (!loaded) {\n      stackPath = stackPath || this.paths.getPattern('config/middleware')\n      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || '')}.`)\n    }\n  }\n\n  /**\n   * Boot the app\n   *\n   * @returns {void}\n   */\n  *bootstrap() {\n    if (this.isBooted) return\n    yield this.config.load()\n    yield this.loadServices()\n    this.defaultMiddlewareStack()\n    this.loadRoutes()\n    this.use(function* dispatcher(next) {\n      let [handler, params] = this.app.router.find(this.method, this.path)\n      if (handler) {\n        params.forEach((i) => {\n          this.params[i.name] = i.value\n        });\n        let body = yield handler.call(this, next)\n        if (body) {\n          this.body = body\n          return;\n        }\n      }\n      yield next\n    })\n    this.isBooted = true\n\n    return this\n  }\n\n  /**\n   * Register the given template engine callback `fn` * as `ext`.\n   *\n   * @param {String} ext\n   * @param {GeneratorFunction} fn\n   * @returns {Engine} this\n   */\n  engine(ext, fn) {\n    if (!fn) {\n      throw new Error('GeneratorFunction or Function required')\n    }\n\n    // get file extension\n    var extension = ext[0] !== '.'\n      ? '.' + ext\n      : ext\n\n    // store engine\n    this.engines.set(extension, fn)\n\n    return this\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield app.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {String}\n   */\n  *render(name, options = Object.create(null)) {\n    var renderOptions = Object.create(null)\n    var view\n\n    // merge app.state\n    Object.assign(renderOptions, this.state)\n\n    // merge options._state\n    if (options._state) {\n      Object.assign(renderOptions, options._state)\n    }\n\n    // merge options\n    Object.assign(renderOptions, options)\n\n    // set .cache unless explicitly provided\n    if (renderOptions.cache == null) {\n      renderOptions.cache = this.config.get('view.cache')\n    }\n\n    // primed cache\n    if (renderOptions.cache) {\n      view = this.cache[name]\n    }\n\n    if (!view) {\n      view = new View(name, Object.create({\n        defaultEngine: this.config.get('view.engine', 'html'),\n        root: this.paths.get('app/views', true),\n        engines: this.engines\n      }))\n\n      yield view.fetchPath()\n\n      if (!view.path) {\n        var dirs = Array.isArray(view.root) && view.root.length > 1\n          ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n          : 'directory \"' + view.root + '\"'\n        var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs)\n        err.view = view\n        throw err\n      }\n\n      if (renderOptions.cache) {\n        this.cache[name] = view\n      }\n    }\n\n    // render\n    return yield view.render(renderOptions)\n  }\n\n  /**\n   * Load services\n   * @returns {void}\n   */\n  *loadServices() {\n    let files = this.paths.get('app/services')\n    let seq = []\n    for (let file of files) {\n      let name = basename(file, '.js').replace(/^[0-9]+-/, '')\n      let service = require(`${this.rootPath}/${file}`)(this, this.config)\n      if (service) {\n        this.setService(name, service)\n        this.logger.debug(chalk.green(`service:${name} init ...`))\n        if (service.promise) yield service.promise\n        this.logger.debug(chalk.green(`service:${name} booted`))\n      }\n    }\n  }\n\n  /**\n   * Serves a file\n   *\n   * @param {String} path\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveFile(path, file, options) {\n    var dir = dirname(file)\n    return this.get(path, serveStatic(dir, options))\n  }\n\n  /**\n   * Serves files from a directory\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveDir(path, dir, options) {\n    dir = dirname(dir)\n    return this.get(path + '*', serveStatic(dir, options))\n  }\n\n  /**\n   * Serves static files from a directory. It's an alias for `app#serveDir`\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  static(path, dir, options) {\n    return this.serveDir(path, dir, options)\n  }\n\n  /**\n   * Serves the default favicon - GET /favicon.ico\n   *\n   * @param {String} file\n   * @returns {Engine} this\n   */\n  favicon(file) {\n    return this.serveFile('/favicon.ico', file)\n  }\n\n  /**\n   * Index serves index file\n   *\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  index(file, options) {\n    return this.serveFile('/', file, options)\n  }\n\n  /**\n   * Run the app\n   *\n   * @param {Mixed} args\n   * @returns {Promise}\n   */\n  run(...args) {\n    this.logger.debug(chalk.green('booting ...'))\n    return co.call(this, function* () {\n      yield this.bootstrap()\n      // TODO: https\n      if (!args[0]) args[0] = this.config.get('site.port')\n      this.server = this.listen(...args)\n      let address = this.server.address()\n      this.logger.info(\n        chalk.green('The application starting in %s on http://%s:%s'),\n        Trek.env,\n        address.address === '::' ? '127.0.0.1' : address.address,\n        address.port\n      )\n    }).catch((e) => {\n      this.logger.error(chalk.bold.red(`${e.stack}`))\n      this.logger.error(chalk.red('boots failed.'))\n    })\n  }\n\n  /**\n   * Match adds a route > handler to the router for multiple HTTP methods provided\n   *\n   * @param {String[]} methods\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  match(methods = [], path, ...handler) {\n    methods.forEach((m) => {\n      if (METHODS.includes(m)) {\n        let v = m.replace('-', '')\n        this[v](path, ...handler)\n      }\n    })\n    return this\n  }\n\n  /**\n   * Special-cased \"all\" method, applying the given route `path`,\n   * middleware, and handler to _every_ HTTP method.\n   *\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  all(path, ...handler) {\n    return this.match(METHODS, path, ...handler)\n  }\n\n}\n\nMETHODS\n  .forEach((m) => {\n    let v = m.replace('-', '')\n    Engine.prototype[v] = eval(`(function (c) {\n      return (function $${v}(path) {\n        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key < _len; _key++) {\n          handlers[_key] = arguments[_key + 1]\n        }\n        handlers = c(handlers)\n        this.router.add(m.toUpperCase(), path, handlers)\n        return this\n      });\n    })`)(composition)\n  })\n"
+    "content": "/*!\n * trek - Engine\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename, dirname, join } from 'path'\nimport serveStatic from 'koa-static'\nimport chalk from 'chalk'\nimport co from 'co'\nimport composition from 'composition'\nimport Koa from 'koa'\nimport Router from 'trek-router'\nimport RouteMapper from 'route-mapper'\nimport Config from './Config'\nimport Context from './Context'\nimport View from './View'\n\nconst METHODS = Router.METHODS\n\n/**\n * The Trek Engine Core\n * @extends Koa\n */\nexport default class Engine extends Koa {\n\n  /**\n   * @param {String} rootPath The app root path.\n   */\n  constructor(rootPath) {\n    super()\n    this.initialized = false\n    this.env = Trek.env\n    if (rootPath) this.rootPath = rootPath\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    // top-most app is mounted at /\n    this.mountpath = '/'\n    this.config = new Config(this.rootPath)\n    this.router = new Router()\n    // override context\n    this.context = new Context()\n    this.engines = new Map()\n    this.cache = Object.create(null)\n    this.state = Object.create(null)\n    this.state.config = this.config\n  }\n\n  /**\n   * Stores the `value` with `key` into `app.config`\n   *\n   * @returns {Engine} this\n   */\n  set(key, value) {\n    this.config.set(key, value)\n    return this;\n  }\n\n  /**\n   * Get the app prefix path\n   *\n   * @returns {String}\n   */\n  get path() {\n    return this.parent\n      ? this.parent.path + this.mountpath\n      : ''\n  }\n\n  /**\n   * Set a working `rootPath` directory for app\n   *\n   * @param {String} root path\n   */\n  set rootPath(rootPath) {\n    this._rootPath = rootPath\n  }\n\n  /**\n   * The app working `rootPath` directory\n   *\n   * @returns {String}\n   */\n  get rootPath() {\n    return this._rootPath || (this._rootPath = dirname(require.main.filename))\n  }\n\n  /**\n   * The `config.paths` delegation\n   *\n   * @returns {Paths} config.paths\n   */\n  get paths() {\n    return this.config.paths\n  }\n\n  /**\n   * The app `logger`\n   *\n   * @return {winston.Logger}\n   */\n  get logger() {\n    return this._logger || (this._logger = Object.create(Trek.logger))\n  }\n\n  /**\n   * Get all servides\n   *\n   * @return {Map} services\n   */\n  get services() {\n    return this._services || (this._services = new Map())\n  }\n\n  /**\n   * Get a service by key\n   *\n   * @param {String} key\n   * @return {Mixed} service\n   */\n  getService(key) {\n    return this.services.get(key)\n  }\n\n  /**\n   * Stores a service\n   *\n   * @param {String} key the service name\n   * @param {Mixed} service the service instance\n   * @returns {void}\n   */\n  setService(key, value) {\n    if (this.services.has(key)) {\n      this.logger.warn(chalk.green(`service:${key} was registed`))\n      return\n    }\n    this.logger.debug(chalk.yellow('service:%s'), key)\n    this.services.set(key, value)\n  }\n\n  /**\n   * Get route mapper.\n   *\n   * @return {RouteMapper} routeMapper\n   */\n  get routeMapper() {\n    return this._routeMapper || (this._routeMapper = new RouteMapper())\n  }\n\n  /**\n   * @private\n   */\n  loadRoutes() {\n    this.logger.debug(`Start load the routes.`)\n    let routesPath = this.paths.get('config/routes', true)\n    let controllersPath = this.paths.get('app/controllers', true)\n    try {\n      //require(routesPath).call(this.routeMapper, this.routeMapper)\n      this.routeMapper.draw(routesPath)\n      this.routeMapper.routes.forEach(r => {\n        let { controller, action } = r\n        let path = join(controllersPath, controller) + '.js'\n        let c = require(path)\n        r.verb.forEach((m) => {\n          let a\n          if (c && (a = c[action])) {\n            if (!Array.isArray(a)) a = [a]\n            this.logger.debug(m, r.as, r.path, controller, action)\n            this[m](r.path, ...a)\n          }\n        });\n      });\n    } catch (e) {\n      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)\n    }\n  }\n\n  /**\n   * Load default middleware stack\n   *\n   * @private\n   */\n  defaultMiddlewareStack() {\n    let stackPath = this.paths.get('config/middleware', true)\n    let existed = !!stackPath\n    let loaded = false\n    let err\n    if (existed) {\n      try {\n        require(stackPath)(this)\n        loaded = true\n      } catch (e) {\n        err = e\n      }\n    }\n    if (!loaded) {\n      stackPath = stackPath || this.paths.getPattern('config/middleware')\n      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || '')}.`)\n    }\n  }\n\n  /**\n   * Boot the app\n   *\n   * @returns {void}\n   */\n  *bootstrap() {\n    if (this.isBooted) return\n    yield this.config.load()\n    yield this.loadServices()\n    this.defaultMiddlewareStack()\n    this.loadRoutes()\n    this.use(function* dispatcher(next) {\n      let [handler, params] = this.app.router.find(this.method, this.path)\n      if (handler) {\n        params.forEach((i) => {\n          this.params[i.name] = i.value\n        });\n        let body = yield handler.call(this, next)\n        if (body) {\n          this.body = body\n          return;\n        }\n      }\n      yield next\n    })\n    this.isBooted = true\n\n    return this\n  }\n\n  /**\n   * Register the given template engine callback `fn` * as `ext`.\n   *\n   * @param {String} ext\n   * @param {GeneratorFunction} fn\n   * @returns {Engine} this\n   */\n  engine(ext, fn) {\n    if (!fn) {\n      throw new Error('GeneratorFunction or Function required')\n    }\n\n    // get file extension\n    var extension = ext[0] !== '.'\n      ? '.' + ext\n      : ext\n\n    // store engine\n    this.engines.set(extension, fn)\n\n    return this\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield app.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {String}\n   */\n  *render(name, options = Object.create(null)) {\n    var renderOptions = Object.create(null)\n    var view\n\n    // merge app.state\n    Object.assign(renderOptions, this.state)\n\n    // merge options._state\n    if (options._state) {\n      Object.assign(renderOptions, options._state)\n    }\n\n    // merge options\n    Object.assign(renderOptions, options)\n\n    // set .cache unless explicitly provided\n    if (renderOptions.cache == null) {\n      renderOptions.cache = this.config.get('view.cache')\n    }\n\n    // primed cache\n    if (renderOptions.cache) {\n      view = this.cache[name]\n    }\n\n    if (!view) {\n      view = new View(name, Object.create({\n        defaultEngine: this.config.get('view.engine', 'html'),\n        root: this.paths.get('app/views', true),\n        engines: this.engines\n      }))\n\n      yield view.fetchPath()\n\n      if (!view.path) {\n        var dirs = Array.isArray(view.root) && view.root.length > 1\n          ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n          : 'directory \"' + view.root + '\"'\n        var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs)\n        err.view = view\n        throw err\n      }\n\n      if (renderOptions.cache) {\n        this.cache[name] = view\n      }\n    }\n\n    // render\n    return yield view.render(renderOptions)\n  }\n\n  /**\n   * Load services\n   * @returns {void}\n   */\n  *loadServices() {\n    let files = this.paths.get('app/services')\n    let seq = []\n    for (let file of files) {\n      let name = basename(file, '.js').replace(/^[0-9]+-/, '')\n      let service = require(`${this.rootPath}/${file}`)(this, this.config)\n      if (service) {\n        this.setService(name, service)\n        this.logger.debug(chalk.green(`service:${name} init ...`))\n        if (service.promise) yield service.promise\n        this.logger.debug(chalk.green(`service:${name} booted`))\n      }\n    }\n  }\n\n  /**\n   * Serves a file\n   *\n   * @param {String} path\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveFile(path, file, options) {\n    var dir = dirname(file)\n    return this.get(path, serveStatic(dir, options))\n  }\n\n  /**\n   * Serves files from a directory\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveDir(path, dir, options) {\n    dir = dirname(dir)\n    return this.get(path + '*', serveStatic(dir, options))\n  }\n\n  /**\n   * Serves static files from a directory. It's an alias for `app#serveDir`\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  static(path, dir, options) {\n    return this.serveDir(path, dir, options)\n  }\n\n  /**\n   * Serves the default favicon - GET /favicon.ico\n   *\n   * @example\n   *\n   *  app.favicon('public/favicon.ico')\n   *\n   * @param {String} file\n   * @returns {Engine} this\n   */\n  favicon(file) {\n    return this.serveFile('/favicon.ico', file)\n  }\n\n  /**\n   * Index serves index file\n   *\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  index(file, options) {\n    return this.serveFile('/', file, options)\n  }\n\n  /**\n   * Run the app\n   *\n   * @param {Mixed} args\n   * @returns {Promise}\n   */\n  run(...args) {\n    this.logger.debug(chalk.green('booting ...'))\n    return co.call(this, function* () {\n      yield this.bootstrap()\n      // TODO: https\n      if (!args[0]) args[0] = this.config.get('site.port')\n      this.server = this.listen(...args)\n      let address = this.server.address()\n      this.logger.info(\n        chalk.green('The application starting in %s on http://%s:%s'),\n        Trek.env,\n        address.address === '::' ? '127.0.0.1' : address.address,\n        address.port\n      )\n    }).catch((e) => {\n      this.logger.error(chalk.bold.red(`${e.stack}`))\n      this.logger.error(chalk.red('boots failed.'))\n    })\n  }\n\n  /**\n   * Match adds a route > handler to the router for multiple HTTP methods provided\n   *\n   * @param {String[]} methods\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  match(methods = [], path, ...handler) {\n    methods.forEach((m) => {\n      if (METHODS.includes(m)) {\n        let v = m.replace('-', '')\n        this[v](path, ...handler)\n      }\n    })\n    return this\n  }\n\n  /**\n   * Special-cased \"all\" method, applying the given route `path`,\n   * middleware, and handler to _every_ HTTP method.\n   *\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  all(path, ...handler) {\n    return this.match(METHODS, path, ...handler)\n  }\n\n}\n\nMETHODS\n  .forEach((m) => {\n    let v = m.replace('-', '')\n    Engine.prototype[v] = eval(`(function (c) {\n      return (function $${v}(path) {\n        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key < _len; _key++) {\n          handlers[_key] = arguments[_key + 1]\n        }\n        handlers = c(handlers)\n        this.router.add(m.toUpperCase(), path, handlers)\n        return this\n      });\n    })`)(composition)\n  })\n"
   },
   {
     "kind": "variable",
@@ -2037,7 +2071,10 @@
     "longname": "src/Engine.js~Engine#favicon",
     "access": null,
     "description": "Serves the default favicon - GET /favicon.ico",
-    "lineNumber": 387,
+    "examples": [
+      "\n app.favicon('public/favicon.ico')"
+    ],
+    "lineNumber": 391,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2075,7 +2112,7 @@
     "longname": "src/Engine.js~Engine#index",
     "access": null,
     "description": "Index serves index file",
-    "lineNumber": 398,
+    "lineNumber": 402,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2123,7 +2160,7 @@
     "longname": "src/Engine.js~Engine#run",
     "access": null,
     "description": "Run the app",
-    "lineNumber": 408,
+    "lineNumber": 412,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2161,7 +2198,7 @@
     "longname": "src/Engine.js~Engine#server",
     "access": null,
     "description": null,
-    "lineNumber": 414,
+    "lineNumber": 418,
     "undocument": true,
     "type": {
       "types": [
@@ -2178,7 +2215,7 @@
     "longname": "src/Engine.js~Engine#match",
     "access": null,
     "description": "Match adds a route > handler to the router for multiple HTTP methods provided",
-    "lineNumber": 436,
+    "lineNumber": 440,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2236,7 +2273,7 @@
     "longname": "src/Engine.js~Engine#all",
     "access": null,
     "description": "Special-cased \"all\" method, applying the given route `path`,\nmiddleware, and handler to _every_ HTTP method.",
-    "lineNumber": 454,
+    "lineNumber": 458,
     "unknown": [
       {
         "tagName": "@returns",
@@ -4043,7 +4080,7 @@
     "access": null,
     "description": null,
     "lineNumber": 1,
-    "content": "import co from 'co'\nimport assert from 'power-assert'\nimport '../src/Trek'\nimport Config from '../src/Config'\n\ndescribe('Config', () => {\n\n  var config = new Config(__dirname + '/fixtures')\n  before(() => {\n    return co(function *() {\n      yield config.load()\n    })\n  })\n\n  describe('#get()', () => {\n    it('should return $PATH from env', () => {\n      assert(config.get('PATH').length !== 0)\n      assert(config.get('PORT') === 377)\n    })\n\n    it('should return a secret key from secrets.js', () => {\n      assert(config.get('secrets.secret_key') === 'Oabah4p')\n    })\n\n  })\n\n  describe('#set()', () => {\n    it('should return new value when reseting', () => {\n      assert(config.get('owner.age') === 144);\n      config.set('owner.age', 233)\n      assert(config.get('owner.age') === 233)\n    })\n  })\n\n})\n\n"
+    "content": "import co from 'co'\nimport assert from 'power-assert'\nimport '../src/Trek'\nimport Config from '../src/Config'\n\ndescribe('Config', () => {\n\n  var config\n\n  before(() => {\n    return co(function *() {\n      config = new Config(__dirname + '/fixtures')\n      yield config.load()\n    })\n  })\n\n  describe('#get()', () => {\n    it('should return $PATH from env', () => {\n      assert(config.get('PATH').length !== 0)\n      assert(config.get('PORT') === 377)\n    })\n\n    it('should return a secret key from secrets.yml', () => {\n      assert(config.get('secrets.secret_key') === 'Oabah4p')\n    })\n\n  })\n\n  describe('#set()', () => {\n    it('should return new value when reseting', () => {\n      assert(config.get('owner.age') === 144);\n      config.set('owner.age', 233)\n      assert(config.get('owner.age') === 233)\n    })\n  })\n\n})\n\n"
   },
   {
     "kind": "testDescribe",
@@ -4069,7 +4106,7 @@
     "longname": "test/Config.test.js~describe0.describe1",
     "access": null,
     "description": "#get()",
-    "lineNumber": 15
+    "lineNumber": 17
   },
   {
     "kind": "testIt",
@@ -4082,7 +4119,7 @@
     "longname": "test/Config.test.js~describe0.describe1.it2",
     "access": null,
     "description": "should return $PATH from env",
-    "lineNumber": 16
+    "lineNumber": 18
   },
   {
     "kind": "testIt",
@@ -4094,8 +4131,8 @@
     "testDepth": 2,
     "longname": "test/Config.test.js~describe0.describe1.it3",
     "access": null,
-    "description": "should return a secret key from secrets.js",
-    "lineNumber": 21
+    "description": "should return a secret key from secrets.yml",
+    "lineNumber": 23
   },
   {
     "kind": "testDescribe",
@@ -4108,7 +4145,7 @@
     "longname": "test/Config.test.js~describe0.describe4",
     "access": null,
     "description": "#set()",
-    "lineNumber": 27
+    "lineNumber": 29
   },
   {
     "kind": "testIt",
@@ -4121,7 +4158,7 @@
     "longname": "test/Config.test.js~describe0.describe4.it5",
     "access": null,
     "description": "should return new value when reseting",
-    "lineNumber": 28
+    "lineNumber": 30
   },
   {
     "kind": "testFile",
