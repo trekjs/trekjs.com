@@ -235,6 +235,47 @@ describe(&apos;Engine&apos;, () =&gt; {
 
   })
 
+  describe(&apos;services&apos;, () =&gt; {
+
+    var db
+    before(() =&gt; {
+      db = {}
+    })
+
+    describe(&apos;#setService()&apos;, () =&gt; {
+
+      it(&apos;should set a service and return app self&apos;, () =&gt; {
+
+        assert(app.setService(&apos;db&apos;, db) === app)
+
+      })
+
+    })
+
+    describe(&apos;#getService()&apos;, () =&gt; {
+
+      it(&apos;should get a service&apos;, () =&gt; {
+
+        assert(app.getService(&apos;db&apos;) === db)
+
+      })
+
+    })
+
+    describe(&apos;#*loadServices()&apos;, () =&gt; {
+
+      it(&apos;should load all services&apos;, () =&gt; {
+
+        return co(function *() {
+          yield app.loadServices()
+        })
+
+      })
+
+    })
+
+  })
+
   describe(&apos;#context&apos;, () =&gt; {
 
     before(() =&gt; {

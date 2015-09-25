@@ -1074,7 +1074,7 @@
     "access": null,
     "description": null,
     "lineNumber": 7,
-    "content": "/*!\n * trek - Engine\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename, dirname, join } from 'path'\nimport serveStatic from 'koa-static'\nimport chalk from 'chalk'\nimport co from 'co'\nimport composition from 'composition'\nimport Koa from 'koa'\nimport Router from 'trek-router'\nimport RouteMapper from 'route-mapper'\nimport Config from './Config'\nimport Context from './Context'\nimport View from './View'\n\nconst METHODS = Router.METHODS\n\n/**\n * The Trek Engine Core\n * @extends {Koa}\n */\nexport default class Engine extends Koa {\n\n  /**\n   * @param {String} rootPath The app root path.\n   */\n  constructor(rootPath) {\n    super()\n    this.initialized = false\n    this.env = Trek.env\n    if (rootPath) this.rootPath = rootPath\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    // top-most app is mounted at /\n    this.mountpath = '/'\n    this.config = new Config(this.rootPath)\n    this.router = new Router()\n    // override context\n    this.context = new Context()\n    this.engines = new Map()\n    this.cache = Object.create(null)\n    this.state = Object.create(null)\n    this.state.config = this.config\n  }\n\n  /**\n   * Stores the `value` with `key` into `app.config`\n   *\n   * @returns {Engine} this\n   */\n  set(key, value) {\n    this.config.set(key, value)\n    return this;\n  }\n\n  /**\n   * Get the app prefix path\n   *\n   * @returns {String}\n   */\n  get path() {\n    return this.parent\n      ? this.parent.path + this.mountpath\n      : ''\n  }\n\n  /**\n   * Set a working `rootPath` directory for app\n   *\n   * @param {String} root path\n   */\n  set rootPath(rootPath) {\n    this._rootPath = rootPath\n  }\n\n  /**\n   * The app working `rootPath` directory\n   *\n   * @returns {String}\n   */\n  get rootPath() {\n    return this._rootPath || (this._rootPath = dirname(require.main.filename))\n  }\n\n  /**\n   * The `config.paths` delegation\n   *\n   * @returns {Paths} config.paths\n   */\n  get paths() {\n    return this.config.paths\n  }\n\n  /**\n   * The app `logger`\n   *\n   * @return {winston.Logger}\n   */\n  get logger() {\n    return this._logger || (this._logger = Object.create(Trek.logger))\n  }\n\n  /**\n   * Get all servides\n   *\n   * @return {Map} services\n   */\n  get services() {\n    return this._services || (this._services = new Map())\n  }\n\n  /**\n   * Get a service by key\n   *\n   * @param {String} key\n   * @return {Mixed} service\n   */\n  getService(key) {\n    return this.services.get(key)\n  }\n\n  /**\n   * Stores a service\n   *\n   * @param {String} key the service name\n   * @param {Mixed} service the service instance\n   * @returns {void}\n   */\n  setService(key, value) {\n    if (this.services.has(key)) {\n      this.logger.warn(chalk.green(`service:${key} was registed`))\n      return\n    }\n    this.logger.debug(chalk.yellow('service:%s'), key)\n    this.services.set(key, value)\n  }\n\n  /**\n   * Get route mapper.\n   *\n   * @return {RouteMapper} routeMapper\n   */\n  get routeMapper() {\n    return this._routeMapper || (this._routeMapper = new RouteMapper())\n  }\n\n  /**\n   * @private\n   */\n  loadRoutes() {\n    this.logger.debug(`Start load the routes.`)\n    let routesPath = this.paths.get('config/routes', true)\n    let controllersPath = this.paths.get('app/controllers', true)\n    try {\n      //require(routesPath).call(this.routeMapper, this.routeMapper)\n      this.routeMapper.draw(routesPath)\n      this.routeMapper.routes.forEach(r => {\n        let { controller, action } = r\n        let path = join(controllersPath, controller) + '.js'\n        let c = require(path)\n        r.verb.forEach((m) => {\n          let a\n          if (c && (a = c[action])) {\n            if (!Array.isArray(a)) a = [a]\n            this.logger.debug(m, r.as, r.path, controller, action)\n            this[m](r.path, ...a)\n          }\n        });\n      });\n    } catch (e) {\n      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)\n    }\n  }\n\n  /**\n   * Load default middleware stack\n   *\n   * @private\n   */\n  defaultMiddlewareStack() {\n    let stackPath = this.paths.get('config/middleware', true)\n    let existed = !!stackPath\n    let loaded = false\n    let err\n    if (existed) {\n      try {\n        require(stackPath)(this)\n        loaded = true\n      } catch (e) {\n        err = e\n      }\n    }\n    if (!loaded) {\n      stackPath = stackPath || this.paths.getPattern('config/middleware')\n      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || '')}.`)\n    }\n  }\n\n  /**\n   * Boot the app\n   *\n   * @returns {void}\n   */\n  *bootstrap() {\n    if (this.isBooted) return\n    yield this.config.load()\n    yield this.loadServices()\n    this.defaultMiddlewareStack()\n    this.loadRoutes()\n    this.use(function* dispatcher(next) {\n      let [handler, params] = this.app.router.find(this.method, this.path)\n      if (handler) {\n        params.forEach((i) => {\n          this.params[i.name] = i.value\n        });\n        let body = yield handler.call(this, next)\n        if (body) {\n          this.body = body\n          return;\n        }\n      }\n      yield next\n    })\n    this.isBooted = true\n\n    return this\n  }\n\n  /**\n   * Register the given template engine callback `fn` * as `ext`.\n   *\n   * @param {String} ext\n   * @param {GeneratorFunction} fn\n   * @returns {Engine} this\n   */\n  engine(ext, fn) {\n    if (!fn) {\n      throw new Error('GeneratorFunction or Function required')\n    }\n\n    // get file extension\n    var extension = ext[0] !== '.'\n      ? '.' + ext\n      : ext\n\n    // store engine\n    this.engines.set(extension, fn)\n\n    return this\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield app.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {String}\n   */\n  *render(name, options = Object.create(null)) {\n    var renderOptions = Object.create(null)\n    var view\n\n    // merge app.state\n    Object.assign(renderOptions, this.state)\n\n    // merge options._state\n    if (options._state) {\n      Object.assign(renderOptions, options._state)\n    }\n\n    // merge options\n    Object.assign(renderOptions, options)\n\n    // set .cache unless explicitly provided\n    if (renderOptions.cache == null) {\n      renderOptions.cache = this.config.get('view.cache')\n    }\n\n    // primed cache\n    if (renderOptions.cache) {\n      view = this.cache[name]\n    }\n\n    if (!view) {\n      view = new View(name, Object.create({\n        defaultEngine: this.config.get('view.engine', 'html'),\n        root: this.paths.get('app/views', true),\n        engines: this.engines\n      }))\n\n      yield view.fetchPath()\n\n      if (!view.path) {\n        var dirs = Array.isArray(view.root) && view.root.length > 1\n          ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n          : 'directory \"' + view.root + '\"'\n        var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs)\n        err.view = view\n        throw err\n      }\n\n      if (renderOptions.cache) {\n        this.cache[name] = view\n      }\n    }\n\n    // render\n    return yield view.render(renderOptions)\n  }\n\n  /**\n   * Load services\n   * @returns {void}\n   */\n  *loadServices() {\n    let files = this.paths.get('app/services')\n    let seq = []\n    for (let file of files) {\n      let name = basename(file, '.js').replace(/^[0-9]+-/, '')\n      let service = require(`${this.rootPath}/${file}`)(this, this.config)\n      if (service) {\n        this.setService(name, service)\n        this.logger.debug(chalk.green(`service:${name} init ...`))\n        if (service.promise) yield service.promise\n        this.logger.debug(chalk.green(`service:${name} booted`))\n      }\n    }\n  }\n\n  /**\n   * Serves a file\n   *\n   * @param {String} path\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveFile(path, file, options) {\n    var dir = dirname(file)\n    return this.get(path, serveStatic(dir, options))\n  }\n\n  /**\n   * Serves files from a directory\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveDir(path, dir, options) {\n    dir = dirname(dir)\n    return this.get(path + '*', serveStatic(dir, options))\n  }\n\n  /**\n   * Serves static files from a directory. It's an alias for `app#serveDir`\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  static(path, dir, options) {\n    return this.serveDir(path, dir, options)\n  }\n\n  /**\n   * Serves the default favicon - GET /favicon.ico\n   *\n   * @example\n   *\n   *  app.favicon('public/favicon.ico')\n   *\n   * @param {String} file\n   * @returns {Engine} this\n   */\n  favicon(file) {\n    return this.serveFile('/favicon.ico', file)\n  }\n\n  /**\n   * Index serves index file\n   *\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  index(file, options) {\n    return this.serveFile('/', file, options)\n  }\n\n  /**\n   * Run the app\n   *\n   * @param {Mixed} args\n   * @returns {Promise}\n   */\n  run(...args) {\n    this.logger.debug(chalk.green('booting ...'))\n    return co.call(this, function* () {\n      yield this.bootstrap()\n      // TODO: https\n      if (!args[0]) args[0] = this.config.get('site.port')\n      this.server = this.listen(...args)\n      let address = this.server.address()\n      this.logger.info(\n        chalk.green('The application starting in %s on http://%s:%s'),\n        Trek.env,\n        address.address === '::' ? '127.0.0.1' : address.address,\n        address.port\n      )\n    }).catch((e) => {\n      this.logger.error(chalk.bold.red(`${e.stack}`))\n      this.logger.error(chalk.red('boots failed.'))\n    })\n  }\n\n  /**\n   * Match adds a route > handler to the router for multiple HTTP methods provided\n   *\n   * @param {String[]} methods\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  match(methods = [], path, ...handler) {\n    methods.forEach((m) => {\n      if (METHODS.includes(m)) {\n        let v = m.replace('-', '')\n        this[v](path, ...handler)\n      }\n    })\n    return this\n  }\n\n  /**\n   * Special-cased \"all\" method, applying the given route `path`,\n   * middleware, and handler to _every_ HTTP method.\n   *\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  all(path, ...handler) {\n    return this.match(METHODS, path, ...handler)\n  }\n\n}\n\nMETHODS\n  .forEach((m) => {\n    let v = m.replace('-', '')\n    Engine.prototype[v] = eval(`(function (c) {\n      return (function $${v}(path) {\n        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key < _len; _key++) {\n          handlers[_key] = arguments[_key + 1]\n        }\n        handlers = c(handlers)\n        this.router.add(m.toUpperCase(), path, handlers)\n        return this\n      });\n    })`)(composition)\n  })\n"
+    "content": "/*!\n * trek - Engine\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename, dirname, join } from 'path'\nimport serveStatic from 'koa-static'\nimport chalk from 'chalk'\nimport co from 'co'\nimport composition from 'composition'\nimport Koa from 'koa'\nimport Router from 'trek-router'\nimport RouteMapper from 'route-mapper'\nimport Config from './Config'\nimport Context from './Context'\nimport View from './View'\n\nconst METHODS = Router.METHODS\n\n/**\n * The Trek Engine Core\n * @extends {Koa}\n */\nexport default class Engine extends Koa {\n\n  /**\n   * @param {String} rootPath The app root path.\n   */\n  constructor(rootPath) {\n    super()\n    this.initialized = false\n    this.env = Trek.env\n    if (rootPath) this.rootPath = rootPath\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    // top-most app is mounted at /\n    this.mountpath = '/'\n    this.config = new Config(this.rootPath)\n    this.router = new Router()\n    // override context\n    this.context = new Context()\n    this.engines = new Map()\n    this.cache = Object.create(null)\n    this.state = Object.create(null)\n    this.state.config = this.config\n  }\n\n  /**\n   * Stores the `value` with `key` into `app.config`\n   *\n   * @returns {Engine} this\n   */\n  set(key, value) {\n    this.config.set(key, value)\n    return this;\n  }\n\n  /**\n   * Get the app prefix path\n   *\n   * @returns {String}\n   */\n  get path() {\n    return this.parent\n      ? this.parent.path + this.mountpath\n      : ''\n  }\n\n  /**\n   * Set a working `rootPath` directory for app\n   *\n   * @param {String} root path\n   */\n  set rootPath(rootPath) {\n    this._rootPath = rootPath\n  }\n\n  /**\n   * The app working `rootPath` directory\n   *\n   * @returns {String}\n   */\n  get rootPath() {\n    return this._rootPath || (this._rootPath = dirname(require.main.filename))\n  }\n\n  /**\n   * The `config.paths` delegation\n   *\n   * @returns {Paths} config.paths\n   */\n  get paths() {\n    return this.config.paths\n  }\n\n  /**\n   * The app `logger`\n   *\n   * @return {winston.Logger}\n   */\n  get logger() {\n    return this._logger || (this._logger = Object.create(Trek.logger))\n  }\n\n  /**\n   * Get all servides\n   *\n   * @example\n   *\n   *  app.services\n   *  // return a `Map` object\n   *  // => map\n   *\n   * @return {Map} services\n   */\n  get services() {\n    return this._services || (this._services = new Map())\n  }\n\n  /**\n   * Get a service by key\n   *\n   * @example\n   *\n   *  app.getService('db')\n   *  // => db\n   *\n   * @param {String} key\n   * @return {*} service\n   */\n  getService(key) {\n    return this.services.get(key)\n  }\n\n  /**\n   * Stores a service\n   *\n   * @example\n   *\n   *  app.setService('db', {})\n   *\n   * @param {String} key the service name\n   * @param {*} service the service instance\n   * @returns {void}\n   */\n  setService(key, value) {\n    if (this.services.has(key)) {\n      this.logger.warn(chalk.green(`service:${key} was registed`))\n      return this\n    }\n    this.logger.debug(chalk.yellow(`service:${key} setting...`))\n    this.services.set(key, value)\n    return this\n  }\n\n  /**\n   * Get route mapper.\n   *\n   * @return {RouteMapper} routeMapper\n   */\n  get routeMapper() {\n    return this._routeMapper || (this._routeMapper = new RouteMapper())\n  }\n\n  /**\n   * @private\n   */\n  loadRoutes() {\n    this.logger.debug(`Start load the routes.`)\n    let routesPath = this.paths.get('config/routes', true)\n    let controllersPath = this.paths.get('app/controllers', true)\n    try {\n      //require(routesPath).call(this.routeMapper, this.routeMapper)\n      this.routeMapper.draw(routesPath)\n      this.routeMapper.routes.forEach(r => {\n        let { controller, action } = r\n        let path = join(controllersPath, controller) + '.js'\n        let c = require(path)\n        r.verb.forEach((m) => {\n          let a\n          if (c && (a = c[action])) {\n            if (!Array.isArray(a)) a = [a]\n            this.logger.debug(m, r.as, r.path, controller, action)\n            this[m](r.path, ...a)\n          }\n        });\n      });\n    } catch (e) {\n      this.logger.warn(`Load the routes failed, ${chalk.red(e)}.`)\n    }\n  }\n\n  /**\n   * Load middleware stack\n   *\n   * @private\n   */\n  loadMiddlewareStack() {\n    let stackPath = this.paths.get('config/middleware', true)\n    let existed = !!stackPath\n    let loaded = false\n    let err\n    if (existed) {\n      try {\n        require(stackPath)(this, this.config)\n        loaded = true\n      } catch (e) {\n        err = e\n      }\n    }\n    if (!loaded) {\n      stackPath = stackPath || this.paths.getPattern('config/middleware')\n      this.logger.warn(`Missing ${stackPath} or require failed, ${chalk.red(err || '')}.`)\n    }\n  }\n\n  /**\n   * Boot the app\n   *\n   * @returns {void}\n   */\n  *bootstrap() {\n    if (this.isBooted) return\n    yield this.config.load()\n    yield this.loadServices()\n    this.loadMiddlewareStack()\n    this.loadRoutes()\n    this.use(function* dispatcher(next) {\n      let [handler, params] = this.app.router.find(this.method, this.path)\n      if (handler) {\n        params.forEach((i) => {\n          this.params[i.name] = i.value\n        });\n        let body = yield handler.call(this, next)\n        if (body) {\n          this.body = body\n          return;\n        }\n      }\n      yield next\n    })\n    this.isBooted = true\n\n    return this\n  }\n\n  /**\n   * Register the given template engine callback `fn` * as `ext`.\n   *\n   * @param {String} ext\n   * @param {GeneratorFunction} fn\n   * @returns {Engine} this\n   */\n  engine(ext, fn) {\n    if (!fn) {\n      throw new Error('GeneratorFunction or Function required')\n    }\n\n    // get file extension\n    var extension = ext[0] !== '.'\n      ? '.' + ext\n      : ext\n\n    // store engine\n    this.engines.set(extension, fn)\n\n    return this\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield app.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {String}\n   */\n  *render(name, options = Object.create(null)) {\n    var renderOptions = Object.create(null)\n    var view\n\n    // merge app.state\n    Object.assign(renderOptions, this.state)\n\n    // merge options._state\n    if (options._state) {\n      Object.assign(renderOptions, options._state)\n    }\n\n    // merge options\n    Object.assign(renderOptions, options)\n\n    // set .cache unless explicitly provided\n    if (renderOptions.cache == null) {\n      renderOptions.cache = this.config.get('view.cache')\n    }\n\n    // primed cache\n    if (renderOptions.cache) {\n      view = this.cache[name]\n    }\n\n    if (!view) {\n      view = new View(name, Object.create({\n        defaultEngine: this.config.get('view.engine', 'html'),\n        root: this.paths.get('app/views', true),\n        engines: this.engines\n      }))\n\n      yield view.fetchPath()\n\n      if (!view.path) {\n        var dirs = Array.isArray(view.root) && view.root.length > 1\n          ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n          : 'directory \"' + view.root + '\"'\n        var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs)\n        err.view = view\n        throw err\n      }\n\n      if (renderOptions.cache) {\n        this.cache[name] = view\n      }\n    }\n\n    // render\n    return yield view.render(renderOptions)\n  }\n\n  /**\n   * Load services\n   * @returns {void}\n   */\n  *loadServices() {\n    let files = this.paths.get('app/services')\n    let seq = []\n    for (let file of files) {\n      let name = basename(file, '.js').replace(/^[0-9]+-/, '')\n      this.logger.debug(chalk.green(`service:${name} init...`))\n      let service = require(`${this.rootPath}/${file}`)(this, this.config)\n      if (service) {\n        this.setService(name, service)\n        if (service.promise) yield service.promise\n        this.logger.debug(chalk.green(`service:${name} booted`))\n      }\n    }\n  }\n\n  /**\n   * Serves a file\n   *\n   * @param {String} path\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveFile(path, file, options) {\n    var dir = dirname(file)\n    return this.get(path, serveStatic(dir, options))\n  }\n\n  /**\n   * Serves files from a directory\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  serveDir(path, dir, options) {\n    dir = dirname(dir)\n    return this.get(path + '*', serveStatic(dir, options))\n  }\n\n  /**\n   * Serves static files from a directory. It's an alias for `app#serveDir`\n   *\n   * @param {String} path\n   * @param {String} dir\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  static(path, dir, options) {\n    return this.serveDir(path, dir, options)\n  }\n\n  /**\n   * Serves the default favicon - GET /favicon.ico\n   *\n   * @example\n   *\n   *  app.favicon('public/favicon.ico')\n   *\n   * @param {String} file\n   * @returns {Engine} this\n   */\n  favicon(file) {\n    return this.serveFile('/favicon.ico', file)\n  }\n\n  /**\n   * Index serves index file\n   *\n   * @param {String} file\n   * @param {Object} options\n   * @returns {Engine} this\n   */\n  index(file, options) {\n    return this.serveFile('/', file, options)\n  }\n\n  /**\n   * Run the app\n   *\n   * @param {*} args\n   * @returns {Promise}\n   */\n  run(...args) {\n    this.logger.debug(chalk.green('booting...'))\n    return co.call(this, function* () {\n      yield this.bootstrap()\n      // TODO: https\n      if (!args[0]) args[0] = this.config.get('site.port')\n      this.server = this.listen(...args)\n      let address = this.server.address()\n      this.logger.info(\n        chalk.green('The application starting in %s on http://%s:%s'),\n        Trek.env,\n        address.address === '::' ? '127.0.0.1' : address.address,\n        address.port\n      )\n    }).catch((e) => {\n      this.logger.error(chalk.bold.red(`${e.stack}`))\n      this.logger.error(chalk.red('boots failed.'))\n    })\n  }\n\n  /**\n   * Match adds a route > handler to the router for multiple HTTP methods provided\n   *\n   * @param {String[]} methods\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  match(methods = [], path, ...handler) {\n    methods.forEach((m) => {\n      if (METHODS.includes(m)) {\n        let v = m.replace('-', '')\n        this[v](path, ...handler)\n      }\n    })\n    return this\n  }\n\n  /**\n   * Special-cased \"all\" method, applying the given route `path`,\n   * middleware, and handler to _every_ HTTP method.\n   *\n   * @param {String} path\n   * @param {GeneratorFunction[]} handler\n   * @returns {Engine} this\n   */\n  all(path, ...handler) {\n    return this.match(METHODS, path, ...handler)\n  }\n\n}\n\nMETHODS\n  .forEach((m) => {\n    let v = m.replace('-', '')\n    Engine.prototype[v] = eval(`(function (c) {\n      return (function $${v}(path) {\n        for (var _len = arguments.length - 1, handlers = Array(_len), _key = 0; _key < _len; _key++) {\n          handlers[_key] = arguments[_key + 1]\n        }\n        handlers = c(handlers)\n        this.router.add(m.toUpperCase(), path, handlers)\n        return this\n      });\n    })`)(composition)\n  })\n"
   },
   {
     "kind": "variable",
@@ -1534,7 +1534,10 @@
     "longname": "src/Engine.js~Engine#services",
     "access": null,
     "description": "Get all servides",
-    "lineNumber": 116,
+    "examples": [
+      "\n app.services\n // return a `Map` object\n // => map"
+    ],
+    "lineNumber": 122,
     "return": {
       "nullable": null,
       "types": [
@@ -1559,7 +1562,10 @@
     "longname": "src/Engine.js~Engine#getService",
     "access": null,
     "description": "Get a service by key",
-    "lineNumber": 126,
+    "examples": [
+      "\n app.getService('db')\n // => db"
+    ],
+    "lineNumber": 137,
     "params": [
       {
         "nullable": null,
@@ -1575,7 +1581,7 @@
     "return": {
       "nullable": null,
       "types": [
-        "Mixed"
+        "*"
       ],
       "spread": false,
       "description": "service"
@@ -1591,7 +1597,10 @@
     "longname": "src/Engine.js~Engine#setService",
     "access": null,
     "description": "Stores a service",
-    "lineNumber": 137,
+    "examples": [
+      "\n app.setService('db', {})"
+    ],
+    "lineNumber": 152,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1612,7 +1621,7 @@
       {
         "nullable": null,
         "types": [
-          "Mixed"
+          "*"
         ],
         "spread": false,
         "optional": false,
@@ -1639,7 +1648,7 @@
     "longname": "src/Engine.js~Engine#routeMapper",
     "access": null,
     "description": "Get route mapper.",
-    "lineNumber": 151,
+    "lineNumber": 167,
     "return": {
       "nullable": null,
       "types": [
@@ -1664,7 +1673,7 @@
     "longname": "src/Engine.js~Engine#loadRoutes",
     "access": "private",
     "description": null,
-    "lineNumber": 158,
+    "lineNumber": 174,
     "params": [],
     "generator": false
   },
@@ -1672,12 +1681,12 @@
     "kind": "method",
     "static": false,
     "variation": null,
-    "name": "defaultMiddlewareStack",
+    "name": "loadMiddlewareStack",
     "memberof": "src/Engine.js~Engine",
-    "longname": "src/Engine.js~Engine#defaultMiddlewareStack",
+    "longname": "src/Engine.js~Engine#loadMiddlewareStack",
     "access": "private",
-    "description": "Load default middleware stack",
-    "lineNumber": 188,
+    "description": "Load middleware stack",
+    "lineNumber": 204,
     "params": [],
     "generator": false
   },
@@ -1690,7 +1699,7 @@
     "longname": "src/Engine.js~Engine#bootstrap",
     "access": null,
     "description": "Boot the app",
-    "lineNumber": 212,
+    "lineNumber": 228,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1717,7 +1726,7 @@
     "longname": "src/Engine.js~Engine#body",
     "access": null,
     "description": null,
-    "lineNumber": 226,
+    "lineNumber": 242,
     "undocument": true,
     "type": {
       "types": [
@@ -1734,7 +1743,7 @@
     "longname": "src/Engine.js~Engine#isBooted",
     "access": null,
     "description": null,
-    "lineNumber": 232,
+    "lineNumber": 248,
     "undocument": true,
     "type": {
       "types": [
@@ -1751,7 +1760,7 @@
     "longname": "src/Engine.js~Engine#engine",
     "access": null,
     "description": "Register the given template engine callback `fn` * as `ext`.",
-    "lineNumber": 244,
+    "lineNumber": 260,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1802,7 +1811,7 @@
     "examples": [
       " yield app.render('site', { name: 'trek' })"
     ],
-    "lineNumber": 272,
+    "lineNumber": 288,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1870,7 +1879,7 @@
     "longname": "src/Engine.js~Engine#loadServices",
     "access": null,
     "description": "Load services",
-    "lineNumber": 328,
+    "lineNumber": 344,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1897,7 +1906,7 @@
     "longname": "src/Engine.js~Engine#serveFile",
     "access": null,
     "description": "Serves a file",
-    "lineNumber": 351,
+    "lineNumber": 367,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1955,7 +1964,7 @@
     "longname": "src/Engine.js~Engine#serveDir",
     "access": null,
     "description": "Serves files from a directory",
-    "lineNumber": 364,
+    "lineNumber": 380,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2013,7 +2022,7 @@
     "longname": "src/Engine.js~Engine#static",
     "access": null,
     "description": "Serves static files from a directory. It's an alias for `app#serveDir`",
-    "lineNumber": 377,
+    "lineNumber": 393,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2074,7 +2083,7 @@
     "examples": [
       "\n app.favicon('public/favicon.ico')"
     ],
-    "lineNumber": 391,
+    "lineNumber": 407,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2112,7 +2121,7 @@
     "longname": "src/Engine.js~Engine#index",
     "access": null,
     "description": "Index serves index file",
-    "lineNumber": 402,
+    "lineNumber": 418,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2160,7 +2169,7 @@
     "longname": "src/Engine.js~Engine#run",
     "access": null,
     "description": "Run the app",
-    "lineNumber": 412,
+    "lineNumber": 428,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2171,7 +2180,7 @@
       {
         "nullable": null,
         "types": [
-          "Mixed"
+          "*"
         ],
         "spread": false,
         "optional": false,
@@ -2198,7 +2207,7 @@
     "longname": "src/Engine.js~Engine#server",
     "access": null,
     "description": null,
-    "lineNumber": 418,
+    "lineNumber": 434,
     "undocument": true,
     "type": {
       "types": [
@@ -2215,7 +2224,7 @@
     "longname": "src/Engine.js~Engine#match",
     "access": null,
     "description": "Match adds a route > handler to the router for multiple HTTP methods provided",
-    "lineNumber": 440,
+    "lineNumber": 456,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2273,7 +2282,7 @@
     "longname": "src/Engine.js~Engine#all",
     "access": null,
     "description": "Special-cased \"all\" method, applying the given route `path`,\nmiddleware, and handler to _every_ HTTP method.",
-    "lineNumber": 458,
+    "lineNumber": 474,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2374,7 +2383,7 @@
     "access": null,
     "description": null,
     "lineNumber": 7,
-    "content": "/*!\n * trek - Paths\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport path from 'path'\nimport glob from 'glob'\nimport _debug from 'debug'\n\nconst debug = _debug('trek:paths')\n\n/**\n *\n */\nexport default class Paths {\n\n  /**\n   * @param {String} root The root path\n   * @param {String} [formats='toml|json|js|yml'] The formats can parse and render\n   */\n  constructor(root, formats = 'toml|json|js|yml') {\n    this.root = root\n    this.formats = formats\n    this.blueprint = new Map()\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this\n      .set('app')\n      .set('app/controllers')\n      .set('app/models',        { glob: 'app/models/*.js', multi: true })\n      .set('app/views')\n      .set('app/services',      { glob: 'app/services/*.js', multi: true })\n\n      .set('lib')\n\n      .set('config')\n      .set('config/app',        { glob: `config/app.?(${this.formats})` })\n      .set(`config/app.env`,    { glob: `config/app.${Trek.env}.?(${this.formats})` })\n      .set('config/.env',       { with: `config/.env.${Trek.env}` })\n      .set('config/database',   { glob: `config/database.?(${this.formats})` })\n      .set('config/secrets',    { glob: `config/secrets.?(${this.formats})` })\n      .set('config/routes',     { with: 'config/routes.js' })\n      .set('config/middleware', { with: 'config/middleware.js' })\n      .set('config/locales')\n\n      .set('public')\n      .set('log',               { with: `log/${Trek.env}.log` })\n      .set('tmp')\n  }\n\n  /**\n   * Get the path with the key path from paths\n   *\n   * @param {String} key The key path\n   * @param {Boolean} [absolute=false] Relative or absolute path\n   * @returns {String} path\n   */\n  get(key, absolute = false) {\n    if (!this.blueprint.has(key)) return null\n    let value = this.blueprint.get(key)\n    let pattern = value.glob || value.with\n    if (pattern) {\n      let res = glob(pattern, { sync: true, realpath: absolute, cwd: this.root })\n      return value.multi ? res : res[0]\n    }\n    return path.join(absolute ? this.root : '', value)\n  }\n\n  /**\n   * Set the `value` with the `key` path onto paths\n   *\n   * @param {String} key The key path\n   * @param {Object|String} value [value=key]\n   * @returns {Paths}\n   */\n  set(key, value) {\n    value = value || key\n    debug(`set \"${key}\"`)\n    this.blueprint.set(key, value)\n    return this\n  }\n\n  /**\n   * Get the path pattern with the `key` path from paths\n   *\n   * @param {String} key The key path\n   * @returns {String} The file path\n   */\n  getPattern(key) {\n    if (!this.blueprint.has(key)) return null\n    let value = this.blueprint.get(key)\n    return value.with || value.glob || value\n  }\n\n}\n"
+    "content": "/*!\n * trek - Paths\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport path from 'path'\nimport glob from 'glob'\nimport _debug from 'debug'\n\nconst debug = _debug('trek:paths')\n\n/**\n *\n */\nexport default class Paths {\n\n  /**\n   * @param {String} root The root path\n   * @param {String} [formats='toml|json|js|yml'] The formats can parse and render\n   */\n  constructor(root, formats = 'toml|json|js|yml') {\n    this.root = root\n    this.formats = formats\n    this.blueprint = new Map()\n    this.initialize()\n  }\n\n  /**\n   * @private\n   */\n  initialize() {\n    this\n      .set('app')\n      .set('app/controllers')\n      .set('app/models',        { glob: 'app/models/*.js', multi: true })\n      .set('app/views')\n      .set('app/services',      { glob: 'app/services/*.js', multi: true })\n\n      .set('lib')\n\n      .set('config')\n      .set('config/app',        { glob: `config/app.?(${this.formats})` })\n      .set(`config/app.env`,    { glob: `config/app.${Trek.env}.?(${this.formats})` })\n      .set('config/.env',       { with: `config/.env.${Trek.env}` })\n      .set('config/database',   { glob: `config/database.?(${this.formats})` })\n      .set('config/secrets',    { glob: `config/secrets.?(${this.formats})` })\n      .set('config/routes',     { with: 'config/routes.js' })\n      .set('config/middleware', { with: 'config/middleware.js' })\n      .set('config/locales')\n\n      .set('public')\n      .set('log',               { with: `log/${Trek.env}.log` })\n      .set('tmp')\n  }\n\n  /**\n   * Get the path with the key path from paths\n   *\n   * @param {String} key The key path\n   * @param {Boolean} [absolute=false] Relative or absolute path\n   * @returns {String} path\n   */\n  get(key, absolute = false) {\n    let value = this.blueprint.get(key) || key\n    let pattern = value.glob || value.with || value\n    let res = glob(pattern, { sync: true, realpath: absolute, cwd: this.root })\n    return value.multi ? res : res[0]\n  }\n\n  /**\n   * Set the `value` with the `key` path onto paths\n   *\n   * @param {String} key The key path\n   * @param {Object|String} value [value=key]\n   * @returns {Paths}\n   */\n  set(key, value) {\n    value = value || key\n    debug(`set \"${key}\"`)\n    this.blueprint.set(key, value)\n    return this\n  }\n\n  /**\n   * Get the path pattern with the `key` path from paths\n   *\n   * @param {String} key The key path\n   * @returns {String} The file path\n   */\n  getPattern(key) {\n    if (!this.blueprint.has(key)) return null\n    let value = this.blueprint.get(key)\n    return value.with || value.glob || value\n  }\n\n}\n"
   },
   {
     "kind": "variable",
@@ -2570,7 +2579,7 @@
     "longname": "src/Paths.js~Paths#set",
     "access": null,
     "description": "Set the `value` with the `key` path onto paths",
-    "lineNumber": 82,
+    "lineNumber": 78,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2619,7 +2628,7 @@
     "longname": "src/Paths.js~Paths#getPattern",
     "access": null,
     "description": "Get the path pattern with the `key` path from paths",
-    "lineNumber": 95,
+    "lineNumber": 91,
     "unknown": [
       {
         "tagName": "@returns",
@@ -2647,18 +2656,6 @@
       "description": "The file path"
     },
     "generator": false
-  },
-  {
-    "kind": "file",
-    "static": true,
-    "variation": null,
-    "name": "src/Stack.js",
-    "memberof": null,
-    "longname": "src/Stack.js",
-    "access": null,
-    "description": null,
-    "lineNumber": 1,
-    "content": "import bodyParser from 'koa-bodyparser';\nimport compress from 'koa-compress';\nimport methodOverride from 'koa-methodoverride';\n"
   },
   {
     "kind": "file",
@@ -4170,7 +4167,7 @@
     "access": null,
     "description": null,
     "lineNumber": 1,
-    "content": "import assert from 'power-assert'\nimport requireTimes from 'require-times'\nimport request from 'supertest'\nimport co from 'co'\nimport _ from 'lodash'\nimport swig from 'koa-swig'\nimport '../src/Trek'\nimport Config from '../src/Config'\nimport Paths from '../src/Paths'\nimport Engine from '../src/Engine'\n\ndescribe('Engine', () => {\n\n  var app\n  const ROOT_PATH = `${__dirname}/fixtures`\n\n  before(() => {\n    return co(function* () {\n      app = new Engine(ROOT_PATH)\n      app.logger.level = 'debug'\n      yield app.bootstrap()\n    })\n  })\n\n  describe('#env', () => {\n\n    it('should return `Trek.env`', () => {\n      assert(app.env === Trek.env)\n    })\n\n  })\n\n  describe('#rootPath', () => {\n\n    it('should set a path', () => {\n      app.rootPath = 'fixtures'\n      assert(app.rootPath === 'fixtures')\n    })\n\n    it('should get a path', () => {\n      app.rootPath = ROOT_PATH\n      assert(app.rootPath === __dirname + '/fixtures')\n    })\n\n  })\n\n  describe('#config', () => {\n\n    it('should return a Config instance', () => {\n      assert(app.config instanceof Config)\n    })\n\n  })\n\n  describe('#paths', () => {\n\n    it('should return a Paths instance', () => {\n      assert(app.paths instanceof Paths)\n    })\n\n    it('should equal to #config.paths', () => {\n      assert(app.paths === app.config.paths)\n    })\n\n  })\n\n  describe('#path', () => {\n\n    it('should return empty string when parent is null', () => {\n      assert(app.path === '')\n    })\n\n  })\n\n  describe('#run()', () => {\n\n    it('should be a function', () => {\n      assert(_.isFunction(app.run) === true)\n    })\n\n    it('should return a promise', () => {\n      assert(app.run().constructor.name === 'Promise')\n    })\n\n  })\n\n  describe('#*render()', () => {\n    var user = {\n      name: 'tobi'\n    }\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    it('should render the template', () => {\n\n      return co(function *() {\n        var str = yield app.render('user', {\n          user: user\n        })\n        assert(str === '<p>tobi</p>\\n')\n\n        var str1 = yield app.render('config', {\n          user: {\n            name: 'robo'\n          }\n        })\n        assert(str1 === 'html\\n')\n      })\n    })\n\n  })\n\n  describe('http verbs, get(), post()..., match(), all()', () => {\n\n    it('#match()', (done) => {\n\n      app.match(['get', 'post'], '/ping', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .get('/ping')\n        .expect('GET', function(){\n          request(app.listen())\n          .post('/ping')\n          .expect('POST', done)\n        })\n\n    })\n\n    it('#all()', (done) => {\n\n      app.all('/tobi', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .put('/tobi')\n        .expect('PUT', function(){\n          request(app.listen())\n          .get('/tobi')\n          .expect('GET', done)\n        })\n\n    })\n\n  })\n\n  describe('serve static', () => {\n\n    it('#index()', () => {\n\n      app.index(`${app.rootPath}/public/index.html`)\n\n      return request(app.listen())\n        .get('/')\n        .expect(200)\n\n    })\n\n    it('#favicon()', () => {\n\n      app.favicon(`${app.rootPath}/public/favicon.ico`)\n\n      return request(app.listen())\n        .get('/favicon.ico')\n        .expect(200)\n\n    })\n\n    it('#static()', () => {\n\n      app.static('/scripts', `${app.rootPath}/public/scripts`)\n\n      return request(app.listen())\n        .get('/scripts/main.js')\n        .expect(200)\n\n    })\n\n    it('#serveDir()', () => {\n\n      app.serveDir('/styles', `${app.rootPath}/public/styles`)\n\n      return request(app.listen())\n        .get('/styles/main.css')\n        .expect(200)\n\n    })\n\n  })\n\n  describe('#context', () => {\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    describe('#render()', () => {\n\n      it('should render template', () => {\n\n        app.get('/', function* () {\n          yield this.render('user', {\n            user: {\n              name: 'trek'\n            }\n          })\n        })\n\n        return request(app.listen())\n          .get('/')\n          .expect(200, '<p>trek</p>\\n')\n\n      })\n\n    })\n\n    describe('#sendFile()', () => {\n\n      it('should send a file', () => {\n\n        app.get('/robot.txt', function* () {\n\n          yield this.sendFile(`${this.app.rootPath}/public/robot.txt`)\n\n        })\n\n        return request(app.listen())\n          .get('/robot.txt')\n          .expect(200, '// robots\\n')\n\n      })\n\n    })\n\n    describe('#json()', () => {\n\n      it('should response with json', () => {\n\n        app.get('/users', function* () {\n\n          this.json([{\n            name: 'trek'\n          }])\n\n        })\n\n        return request(app.listen())\n          .get('/users')\n          .expect('Content-Type', 'application/json; charset=utf-8')\n          .expect(200, '[{\"name\":\"trek\"}]')\n\n      })\n\n    })\n\n    describe('#jsonp()', () => {\n\n      it('should response with jsonp', () => {\n\n        app.get('/jsonp', function* () {\n\n          this.jsonp({\n            count: 1\n          })\n\n        })\n\n        return request(app.listen())\n          .get('/jsonp?callback=something')\n          .expect('Content-Type', 'application/javascript; charset=utf-8')\n          .expect('X-Content-Type-Options', 'nosniff')\n          .expect(200, /something\\(\\{\"count\":1\\}\\)/)\n\n      })\n\n    })\n\n    describe('#xhr', () => {\n\n      it('should return true when X-Requested-With is xmlhttprequest', () => {\n\n        app.get('/xhr', function* () {\n          assert(this.xhr === true)\n          this.status = 200\n        })\n\n        return request(app.listen())\n          .get('/xhr')\n          .set('X-Requested-With', 'xmlhttprequest')\n          .expect(200)\n\n      })\n\n    })\n\n  })\n\n})\n"
+    "content": "import assert from 'power-assert'\nimport requireTimes from 'require-times'\nimport request from 'supertest'\nimport co from 'co'\nimport _ from 'lodash'\nimport swig from 'koa-swig'\nimport '../src/Trek'\nimport Config from '../src/Config'\nimport Paths from '../src/Paths'\nimport Engine from '../src/Engine'\n\ndescribe('Engine', () => {\n\n  var app\n  const ROOT_PATH = `${__dirname}/fixtures`\n\n  before(() => {\n    return co(function* () {\n      app = new Engine(ROOT_PATH)\n      app.logger.level = 'debug'\n      yield app.bootstrap()\n    })\n  })\n\n  describe('#env', () => {\n\n    it('should return `Trek.env`', () => {\n      assert(app.env === Trek.env)\n    })\n\n  })\n\n  describe('#rootPath', () => {\n\n    it('should set a path', () => {\n      app.rootPath = 'fixtures'\n      assert(app.rootPath === 'fixtures')\n    })\n\n    it('should get a path', () => {\n      app.rootPath = ROOT_PATH\n      assert(app.rootPath === __dirname + '/fixtures')\n    })\n\n  })\n\n  describe('#config', () => {\n\n    it('should return a Config instance', () => {\n      assert(app.config instanceof Config)\n    })\n\n  })\n\n  describe('#paths', () => {\n\n    it('should return a Paths instance', () => {\n      assert(app.paths instanceof Paths)\n    })\n\n    it('should equal to #config.paths', () => {\n      assert(app.paths === app.config.paths)\n    })\n\n  })\n\n  describe('#path', () => {\n\n    it('should return empty string when parent is null', () => {\n      assert(app.path === '')\n    })\n\n  })\n\n  describe('#run()', () => {\n\n    it('should be a function', () => {\n      assert(_.isFunction(app.run) === true)\n    })\n\n    it('should return a promise', () => {\n      assert(app.run().constructor.name === 'Promise')\n    })\n\n  })\n\n  describe('#*render()', () => {\n    var user = {\n      name: 'tobi'\n    }\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    it('should render the template', () => {\n\n      return co(function *() {\n        var str = yield app.render('user', {\n          user: user\n        })\n        assert(str === '<p>tobi</p>\\n')\n\n        var str1 = yield app.render('config', {\n          user: {\n            name: 'robo'\n          }\n        })\n        assert(str1 === 'html\\n')\n      })\n    })\n\n  })\n\n  describe('http verbs, get(), post()..., match(), all()', () => {\n\n    it('#match()', (done) => {\n\n      app.match(['get', 'post'], '/ping', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .get('/ping')\n        .expect('GET', function(){\n          request(app.listen())\n          .post('/ping')\n          .expect('POST', done)\n        })\n\n    })\n\n    it('#all()', (done) => {\n\n      app.all('/tobi', function* (){\n        this.body = this.req.method\n      })\n\n      request(app.listen())\n        .put('/tobi')\n        .expect('PUT', function(){\n          request(app.listen())\n          .get('/tobi')\n          .expect('GET', done)\n        })\n\n    })\n\n  })\n\n  describe('serve static', () => {\n\n    it('#index()', () => {\n\n      app.index(`${app.rootPath}/public/index.html`)\n\n      return request(app.listen())\n        .get('/')\n        .expect(200)\n\n    })\n\n    it('#favicon()', () => {\n\n      app.favicon(`${app.rootPath}/public/favicon.ico`)\n\n      return request(app.listen())\n        .get('/favicon.ico')\n        .expect(200)\n\n    })\n\n    it('#static()', () => {\n\n      app.static('/scripts', `${app.rootPath}/public/scripts`)\n\n      return request(app.listen())\n        .get('/scripts/main.js')\n        .expect(200)\n\n    })\n\n    it('#serveDir()', () => {\n\n      app.serveDir('/styles', `${app.rootPath}/public/styles`)\n\n      return request(app.listen())\n        .get('/styles/main.css')\n        .expect(200)\n\n    })\n\n  })\n\n  describe('services', () => {\n\n    var db\n    before(() => {\n      db = {}\n    })\n\n    describe('#setService()', () => {\n\n      it('should set a service and return app self', () => {\n\n        assert(app.setService('db', db) === app)\n\n      })\n\n    })\n\n    describe('#getService()', () => {\n\n      it('should get a service', () => {\n\n        assert(app.getService('db') === db)\n\n      })\n\n    })\n\n    describe('#*loadServices()', () => {\n\n      it('should load all services', () => {\n\n        return co(function *() {\n          yield app.loadServices()\n        })\n\n      })\n\n    })\n\n  })\n\n  describe('#context', () => {\n\n    before(() => {\n      app.engine('html', swig())\n    })\n\n    describe('#render()', () => {\n\n      it('should render template', () => {\n\n        app.get('/', function* () {\n          yield this.render('user', {\n            user: {\n              name: 'trek'\n            }\n          })\n        })\n\n        return request(app.listen())\n          .get('/')\n          .expect(200, '<p>trek</p>\\n')\n\n      })\n\n    })\n\n    describe('#sendFile()', () => {\n\n      it('should send a file', () => {\n\n        app.get('/robot.txt', function* () {\n\n          yield this.sendFile(`${this.app.rootPath}/public/robot.txt`)\n\n        })\n\n        return request(app.listen())\n          .get('/robot.txt')\n          .expect(200, '// robots\\n')\n\n      })\n\n    })\n\n    describe('#json()', () => {\n\n      it('should response with json', () => {\n\n        app.get('/users', function* () {\n\n          this.json([{\n            name: 'trek'\n          }])\n\n        })\n\n        return request(app.listen())\n          .get('/users')\n          .expect('Content-Type', 'application/json; charset=utf-8')\n          .expect(200, '[{\"name\":\"trek\"}]')\n\n      })\n\n    })\n\n    describe('#jsonp()', () => {\n\n      it('should response with jsonp', () => {\n\n        app.get('/jsonp', function* () {\n\n          this.jsonp({\n            count: 1\n          })\n\n        })\n\n        return request(app.listen())\n          .get('/jsonp?callback=something')\n          .expect('Content-Type', 'application/javascript; charset=utf-8')\n          .expect('X-Content-Type-Options', 'nosniff')\n          .expect(200, /something\\(\\{\"count\":1\\}\\)/)\n\n      })\n\n    })\n\n    describe('#xhr', () => {\n\n      it('should return true when X-Requested-With is xmlhttprequest', () => {\n\n        app.get('/xhr', function* () {\n          assert(this.xhr === true)\n          this.status = 200\n        })\n\n        return request(app.listen())\n          .get('/xhr')\n          .set('X-Requested-With', 'xmlhttprequest')\n          .expect(200)\n\n      })\n\n    })\n\n  })\n\n})\n"
   },
   {
     "kind": "testDescribe",
@@ -4520,7 +4517,7 @@
     "testDepth": 1,
     "longname": "test/Engine.test.js~describe6.describe32",
     "access": null,
-    "description": "#context",
+    "description": "services",
     "lineNumber": 195
   },
   {
@@ -4533,8 +4530,8 @@
     "testDepth": 2,
     "longname": "test/Engine.test.js~describe6.describe32.describe33",
     "access": null,
-    "description": "#render()",
-    "lineNumber": 201
+    "description": "#setService()",
+    "lineNumber": 202
   },
   {
     "kind": "testIt",
@@ -4546,8 +4543,8 @@
     "testDepth": 3,
     "longname": "test/Engine.test.js~describe6.describe32.describe33.it34",
     "access": null,
-    "description": "should render template",
-    "lineNumber": 203
+    "description": "should set a service and return app self",
+    "lineNumber": 204
   },
   {
     "kind": "testDescribe",
@@ -4559,8 +4556,8 @@
     "testDepth": 2,
     "longname": "test/Engine.test.js~describe6.describe32.describe35",
     "access": null,
-    "description": "#sendFile()",
-    "lineNumber": 221
+    "description": "#getService()",
+    "lineNumber": 212
   },
   {
     "kind": "testIt",
@@ -4572,8 +4569,8 @@
     "testDepth": 3,
     "longname": "test/Engine.test.js~describe6.describe32.describe35.it36",
     "access": null,
-    "description": "should send a file",
-    "lineNumber": 223
+    "description": "should get a service",
+    "lineNumber": 214
   },
   {
     "kind": "testDescribe",
@@ -4585,8 +4582,8 @@
     "testDepth": 2,
     "longname": "test/Engine.test.js~describe6.describe32.describe37",
     "access": null,
-    "description": "#json()",
-    "lineNumber": 239
+    "description": "#*loadServices()",
+    "lineNumber": 222
   },
   {
     "kind": "testIt",
@@ -4598,8 +4595,8 @@
     "testDepth": 3,
     "longname": "test/Engine.test.js~describe6.describe32.describe37.it38",
     "access": null,
-    "description": "should response with json",
-    "lineNumber": 241
+    "description": "should load all services",
+    "lineNumber": 224
   },
   {
     "kind": "testDescribe",
@@ -4607,51 +4604,142 @@
     "variation": null,
     "name": "describe39",
     "testId": 39,
-    "memberof": "test/Engine.test.js~describe6.describe32",
-    "testDepth": 2,
-    "longname": "test/Engine.test.js~describe6.describe32.describe39",
+    "memberof": "test/Engine.test.js~describe6",
+    "testDepth": 1,
+    "longname": "test/Engine.test.js~describe6.describe39",
     "access": null,
-    "description": "#jsonp()",
-    "lineNumber": 260
-  },
-  {
-    "kind": "testIt",
-    "static": true,
-    "variation": null,
-    "name": "it40",
-    "testId": 40,
-    "memberof": "test/Engine.test.js~describe6.describe32.describe39",
-    "testDepth": 3,
-    "longname": "test/Engine.test.js~describe6.describe32.describe39.it40",
-    "access": null,
-    "description": "should response with jsonp",
-    "lineNumber": 262
+    "description": "#context",
+    "lineNumber": 236
   },
   {
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe41",
-    "testId": 41,
-    "memberof": "test/Engine.test.js~describe6.describe32",
+    "name": "describe40",
+    "testId": 40,
+    "memberof": "test/Engine.test.js~describe6.describe39",
     "testDepth": 2,
-    "longname": "test/Engine.test.js~describe6.describe32.describe41",
+    "longname": "test/Engine.test.js~describe6.describe39.describe40",
     "access": null,
-    "description": "#xhr",
-    "lineNumber": 282
+    "description": "#render()",
+    "lineNumber": 242
   },
   {
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it42",
-    "testId": 42,
-    "memberof": "test/Engine.test.js~describe6.describe32.describe41",
+    "name": "it41",
+    "testId": 41,
+    "memberof": "test/Engine.test.js~describe6.describe39.describe40",
     "testDepth": 3,
-    "longname": "test/Engine.test.js~describe6.describe32.describe41.it42",
+    "longname": "test/Engine.test.js~describe6.describe39.describe40.it41",
+    "access": null,
+    "description": "should render template",
+    "lineNumber": 244
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe42",
+    "testId": 42,
+    "memberof": "test/Engine.test.js~describe6.describe39",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe39.describe42",
+    "access": null,
+    "description": "#sendFile()",
+    "lineNumber": 262
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it43",
+    "testId": 43,
+    "memberof": "test/Engine.test.js~describe6.describe39.describe42",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe39.describe42.it43",
+    "access": null,
+    "description": "should send a file",
+    "lineNumber": 264
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe44",
+    "testId": 44,
+    "memberof": "test/Engine.test.js~describe6.describe39",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe39.describe44",
+    "access": null,
+    "description": "#json()",
+    "lineNumber": 280
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it45",
+    "testId": 45,
+    "memberof": "test/Engine.test.js~describe6.describe39.describe44",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe39.describe44.it45",
+    "access": null,
+    "description": "should response with json",
+    "lineNumber": 282
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe46",
+    "testId": 46,
+    "memberof": "test/Engine.test.js~describe6.describe39",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe39.describe46",
+    "access": null,
+    "description": "#jsonp()",
+    "lineNumber": 301
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it47",
+    "testId": 47,
+    "memberof": "test/Engine.test.js~describe6.describe39.describe46",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe39.describe46.it47",
+    "access": null,
+    "description": "should response with jsonp",
+    "lineNumber": 303
+  },
+  {
+    "kind": "testDescribe",
+    "static": true,
+    "variation": null,
+    "name": "describe48",
+    "testId": 48,
+    "memberof": "test/Engine.test.js~describe6.describe39",
+    "testDepth": 2,
+    "longname": "test/Engine.test.js~describe6.describe39.describe48",
+    "access": null,
+    "description": "#xhr",
+    "lineNumber": 323
+  },
+  {
+    "kind": "testIt",
+    "static": true,
+    "variation": null,
+    "name": "it49",
+    "testId": 49,
+    "memberof": "test/Engine.test.js~describe6.describe39.describe48",
+    "testDepth": 3,
+    "longname": "test/Engine.test.js~describe6.describe39.describe48.it49",
     "access": null,
     "description": "should return true when X-Requested-With is xmlhttprequest",
-    "lineNumber": 284
+    "lineNumber": 325
   },
   {
     "kind": "testFile",
@@ -4669,11 +4757,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe43",
-    "testId": 43,
+    "name": "describe50",
+    "testId": 50,
     "memberof": "test/Paths.test.js",
     "testDepth": 0,
-    "longname": "test/Paths.test.js~describe43",
+    "longname": "test/Paths.test.js~describe50",
     "access": null,
     "description": "Paths",
     "lineNumber": 5
@@ -4682,11 +4770,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe44",
-    "testId": 44,
-    "memberof": "test/Paths.test.js~describe43",
+    "name": "describe51",
+    "testId": 51,
+    "memberof": "test/Paths.test.js~describe50",
     "testDepth": 1,
-    "longname": "test/Paths.test.js~describe43.describe44",
+    "longname": "test/Paths.test.js~describe50.describe51",
     "access": null,
     "description": "#root",
     "lineNumber": 8
@@ -4695,11 +4783,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it45",
-    "testId": 45,
-    "memberof": "test/Paths.test.js~describe43.describe44",
+    "name": "it52",
+    "testId": 52,
+    "memberof": "test/Paths.test.js~describe50.describe51",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe44.it45",
+    "longname": "test/Paths.test.js~describe50.describe51.it52",
     "access": null,
     "description": "should return a path",
     "lineNumber": 9
@@ -4708,11 +4796,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe46",
-    "testId": 46,
-    "memberof": "test/Paths.test.js~describe43",
+    "name": "describe53",
+    "testId": 53,
+    "memberof": "test/Paths.test.js~describe50",
     "testDepth": 1,
-    "longname": "test/Paths.test.js~describe43.describe46",
+    "longname": "test/Paths.test.js~describe50.describe53",
     "access": null,
     "description": "#formats",
     "lineNumber": 14
@@ -4721,11 +4809,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it47",
-    "testId": 47,
-    "memberof": "test/Paths.test.js~describe43.describe46",
+    "name": "it54",
+    "testId": 54,
+    "memberof": "test/Paths.test.js~describe50.describe53",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe46.it47",
+    "longname": "test/Paths.test.js~describe50.describe53.it54",
     "access": null,
     "description": "should return `toml|json|js|yml`",
     "lineNumber": 15
@@ -4734,11 +4822,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe48",
-    "testId": 48,
-    "memberof": "test/Paths.test.js~describe43",
+    "name": "describe55",
+    "testId": 55,
+    "memberof": "test/Paths.test.js~describe50",
     "testDepth": 1,
-    "longname": "test/Paths.test.js~describe43.describe48",
+    "longname": "test/Paths.test.js~describe50.describe55",
     "access": null,
     "description": "#get()",
     "lineNumber": 20
@@ -4747,11 +4835,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it49",
-    "testId": 49,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it56",
+    "testId": 56,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it49",
+    "longname": "test/Paths.test.js~describe50.describe55.it56",
     "access": null,
     "description": "should return an absolute path",
     "lineNumber": 22
@@ -4760,11 +4848,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it50",
-    "testId": 50,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it57",
+    "testId": 57,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it50",
+    "longname": "test/Paths.test.js~describe50.describe55.it57",
     "access": null,
     "description": "should return app from `app`",
     "lineNumber": 26
@@ -4773,11 +4861,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it51",
-    "testId": 51,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it58",
+    "testId": 58,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it51",
+    "longname": "test/Paths.test.js~describe50.describe55.it58",
     "access": null,
     "description": "should return an array from `app/services`",
     "lineNumber": 30
@@ -4786,11 +4874,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it52",
-    "testId": 52,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it59",
+    "testId": 59,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it52",
+    "longname": "test/Paths.test.js~describe50.describe55.it59",
     "access": null,
     "description": "should return `config/app.toml` from `config/app`",
     "lineNumber": 34
@@ -4799,11 +4887,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it53",
-    "testId": 53,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it60",
+    "testId": 60,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it53",
+    "longname": "test/Paths.test.js~describe50.describe55.it60",
     "access": null,
     "description": "should return `config/app.test.json` from `config/app.env`",
     "lineNumber": 38
@@ -4812,11 +4900,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it54",
-    "testId": 54,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it61",
+    "testId": 61,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it54",
+    "longname": "test/Paths.test.js~describe50.describe55.it61",
     "access": null,
     "description": "should return `config/.env.test` from `config/.env`",
     "lineNumber": 42
@@ -4825,11 +4913,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it55",
-    "testId": 55,
-    "memberof": "test/Paths.test.js~describe43.describe48",
+    "name": "it62",
+    "testId": 62,
+    "memberof": "test/Paths.test.js~describe50.describe55",
     "testDepth": 2,
-    "longname": "test/Paths.test.js~describe43.describe48.it55",
+    "longname": "test/Paths.test.js~describe50.describe55.it62",
     "access": null,
     "description": "should return `config/routes.js` from `config/routes`",
     "lineNumber": 46
@@ -4838,11 +4926,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe56",
-    "testId": 56,
-    "memberof": "test/Paths.test.js~describe43",
+    "name": "describe63",
+    "testId": 63,
+    "memberof": "test/Paths.test.js~describe50",
     "testDepth": 1,
-    "longname": "test/Paths.test.js~describe43.describe56",
+    "longname": "test/Paths.test.js~describe50.describe63",
     "access": null,
     "description": "#set()",
     "lineNumber": 52
@@ -4863,11 +4951,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe57",
-    "testId": 57,
+    "name": "describe64",
+    "testId": 64,
     "memberof": "test/hello-world.test.js",
     "testDepth": 0,
-    "longname": "test/hello-world.test.js~describe57",
+    "longname": "test/hello-world.test.js~describe64",
     "access": null,
     "description": "Trek",
     "lineNumber": 5
@@ -4876,11 +4964,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it58",
-    "testId": 58,
-    "memberof": "test/hello-world.test.js~describe57",
+    "name": "it65",
+    "testId": 65,
+    "memberof": "test/hello-world.test.js~describe64",
     "testDepth": 1,
-    "longname": "test/hello-world.test.js~describe57.it58",
+    "longname": "test/hello-world.test.js~describe64.it65",
     "access": null,
     "description": "hello world",
     "lineNumber": 16
@@ -4889,11 +4977,11 @@
     "kind": "testDescribe",
     "static": true,
     "variation": null,
-    "name": "describe59",
-    "testId": 59,
-    "memberof": "test/hello-world.test.js~describe57",
+    "name": "describe66",
+    "testId": 66,
+    "memberof": "test/hello-world.test.js~describe64",
     "testDepth": 1,
-    "longname": "test/hello-world.test.js~describe57.describe59",
+    "longname": "test/hello-world.test.js~describe64.describe66",
     "access": null,
     "description": "comments resources",
     "lineNumber": 34
@@ -4902,11 +4990,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it60",
-    "testId": 60,
-    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "name": "it67",
+    "testId": 67,
+    "memberof": "test/hello-world.test.js~describe64.describe66",
     "testDepth": 2,
-    "longname": "test/hello-world.test.js~describe57.describe59.it60",
+    "longname": "test/hello-world.test.js~describe64.describe66.it67",
     "access": null,
     "description": "GET /comments",
     "lineNumber": 42
@@ -4915,11 +5003,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it61",
-    "testId": 61,
-    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "name": "it68",
+    "testId": 68,
+    "memberof": "test/hello-world.test.js~describe64.describe66",
     "testDepth": 2,
-    "longname": "test/hello-world.test.js~describe57.describe59.it61",
+    "longname": "test/hello-world.test.js~describe64.describe66.it68",
     "access": null,
     "description": "POST /comments",
     "lineNumber": 48
@@ -4928,11 +5016,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it62",
-    "testId": 62,
-    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "name": "it69",
+    "testId": 69,
+    "memberof": "test/hello-world.test.js~describe64.describe66",
     "testDepth": 2,
-    "longname": "test/hello-world.test.js~describe57.describe59.it62",
+    "longname": "test/hello-world.test.js~describe64.describe66.it69",
     "access": null,
     "description": "DELETE /comments",
     "lineNumber": 54
@@ -4941,11 +5029,11 @@
     "kind": "testIt",
     "static": true,
     "variation": null,
-    "name": "it63",
-    "testId": 63,
-    "memberof": "test/hello-world.test.js~describe57.describe59",
+    "name": "it70",
+    "testId": 70,
+    "memberof": "test/hello-world.test.js~describe64.describe66",
     "testDepth": 2,
-    "longname": "test/hello-world.test.js~describe57.describe59.it63",
+    "longname": "test/hello-world.test.js~describe64.describe66.it70",
     "access": null,
     "description": "GET /comments/new",
     "lineNumber": 60

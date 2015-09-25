@@ -154,6 +154,12 @@ export default class Engine extends Koa {
   /**
    * Get all servides
    *
+   * @example
+   *
+   *  app.services
+   *  // return a `Map` object
+   *  // =&gt; map
+   *
    * @return {Map} services
    */
   get services() {
@@ -163,8 +169,13 @@ export default class Engine extends Koa {
   /**
    * Get a service by key
    *
+   * @example
+   *
+   *  app.getService(&apos;db&apos;)
+   *  // =&gt; db
+   *
    * @param {String} key
-   * @return {Mixed} service
+   * @return {*} service
    */
   getService(key) {
     return this.services.get(key)
@@ -173,17 +184,22 @@ export default class Engine extends Koa {
   /**
    * Stores a service
    *
+   * @example
+   *
+   *  app.setService(&apos;db&apos;, {})
+   *
    * @param {String} key the service name
-   * @param {Mixed} service the service instance
+   * @param {*} service the service instance
    * @returns {void}
    */
   setService(key, value) {
     if (this.services.has(key)) {
       this.logger.warn(chalk.green(`service:${key} was registed`))
-      return
+      return this
     }
-    this.logger.debug(chalk.yellow(&apos;service:%s&apos;), key)
+    this.logger.debug(chalk.yellow(`service:${key} setting...`))
     this.services.set(key, value)
+    return this
   }
 
   /**
@@ -224,18 +240,18 @@ export default class Engine extends Koa {
   }
 
   /**
-   * Load default middleware stack
+   * Load middleware stack
    *
    * @private
    */
-  defaultMiddlewareStack() {
+  loadMiddlewareStack() {
     let stackPath = this.paths.get(&apos;config/middleware&apos;, true)
     let existed = !!stackPath
     let loaded = false
     let err
     if (existed) {
       try {
-        require(stackPath)(this)
+        require(stackPath)(this, this.config)
         loaded = true
       } catch (e) {
         err = e
@@ -256,7 +272,7 @@ export default class Engine extends Koa {
     if (this.isBooted) return
     yield this.config.load()
     yield this.loadServices()
-    this.defaultMiddlewareStack()
+    this.loadMiddlewareStack()
     this.loadRoutes()
     this.use(function* dispatcher(next) {
       let [handler, params] = this.app.router.find(this.method, this.path)
@@ -373,10 +389,10 @@ export default class Engine extends Koa {
     let seq = []
     for (let file of files) {
       let name = basename(file, &apos;.js&apos;).replace(/^[0-9]+-/, &apos;&apos;)
+      this.logger.debug(chalk.green(`service:${name} init...`))
       let service = require(`${this.rootPath}/${file}`)(this, this.config)
       if (service) {
         this.setService(name, service)
-        this.logger.debug(chalk.green(`service:${name} init ...`))
         if (service.promise) yield service.promise
         this.logger.debug(chalk.green(`service:${name} booted`))
       }
@@ -449,11 +465,11 @@ export default class Engine extends Koa {
   /**
    * Run the app
    *
-   * @param {Mixed} args
+   * @param {*} args
    * @returns {Promise}
    */
   run(...args) {
-    this.logger.debug(chalk.green(&apos;booting ...&apos;))
+    this.logger.debug(chalk.green(&apos;booting...&apos;))
     return co.call(this, function* () {
       yield this.bootstrap()
       // TODO: https

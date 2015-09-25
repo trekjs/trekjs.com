@@ -427,67 +427,67 @@ window.esdocSearchIndex = [
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber195",
+    "test-file/test/Engine.test.js.html#lineNumber236",
     "Engine #context",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber239",
+    "test-file/test/Engine.test.js.html#lineNumber280",
     "Engine #context #json()",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber241",
+    "test-file/test/Engine.test.js.html#lineNumber282",
     "Engine #context #json() should response with json",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber260",
+    "test-file/test/Engine.test.js.html#lineNumber301",
     "Engine #context #jsonp()",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber262",
+    "test-file/test/Engine.test.js.html#lineNumber303",
     "Engine #context #jsonp() should response with jsonp",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber201",
+    "test-file/test/Engine.test.js.html#lineNumber242",
     "Engine #context #render()",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber203",
+    "test-file/test/Engine.test.js.html#lineNumber244",
     "Engine #context #render() should render template",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber221",
+    "test-file/test/Engine.test.js.html#lineNumber262",
     "Engine #context #sendFile()",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber223",
+    "test-file/test/Engine.test.js.html#lineNumber264",
     "Engine #context #sendFile() should send a file",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber282",
+    "test-file/test/Engine.test.js.html#lineNumber323",
     "Engine #context #xhr",
     "test"
   ],
   [
     "",
-    "test-file/test/Engine.test.js.html#lineNumber284",
+    "test-file/test/Engine.test.js.html#lineNumber325",
     "Engine #context #xhr should return true when X-Requested-With is xmlhttprequest",
     "test"
   ],
@@ -615,6 +615,48 @@ window.esdocSearchIndex = [
     "",
     "test-file/test/Engine.test.js.html#lineNumber173",
     "Engine serve static #static()",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber195",
+    "Engine services",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber222",
+    "Engine services #*loadServices()",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber224",
+    "Engine services #*loadServices() should load all services",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber212",
+    "Engine services #getService()",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber214",
+    "Engine services #getService() should get a service",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber202",
+    "Engine services #setService()",
+    "test"
+  ],
+  [
+    "",
+    "test-file/test/Engine.test.js.html#lineNumber204",
+    "Engine services #setService() should set a service and return app self",
     "test"
   ],
   [
@@ -1057,13 +1099,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/engine.js~engine#rootpath",
-    "class/src/Engine.js~Engine.html#instance-get-rootPath",
+    "class/src/Engine.js~Engine.html#instance-set-rootPath",
     "src/Engine.js~Engine#rootPath",
     "member"
   ],
   [
     "src/engine.js~engine#rootpath",
-    "class/src/Engine.js~Engine.html#instance-set-rootPath",
+    "class/src/Engine.js~Engine.html#instance-get-rootPath",
     "src/Engine.js~Engine#rootPath",
     "member"
   ],
@@ -1188,12 +1230,6 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
-    "src/stack.js",
-    "file/src/Stack.js.html",
-    "src/Stack.js",
-    "file"
-  ],
-  [
     "src/trek.js",
     "file/src/Trek.js.html",
     "src/Trek.js",
@@ -1225,13 +1261,13 @@ window.esdocSearchIndex = [
   ],
   [
     "src/trek.js~trek.logger",
-    "class/src/Trek.js~Trek.html#static-get-logger",
+    "class/src/Trek.js~Trek.html#static-set-logger",
     "src/Trek.js~Trek.logger",
     "member"
   ],
   [
     "src/trek.js~trek.logger",
-    "class/src/Trek.js~Trek.html#static-set-logger",
+    "class/src/Trek.js~Trek.html#static-get-logger",
     "src/Trek.js~Trek.logger",
     "member"
   ],
