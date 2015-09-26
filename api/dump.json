@@ -557,7 +557,7 @@
     "access": null,
     "description": null,
     "lineNumber": 7,
-    "content": "/*!\n * trek - Context\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename } from 'path'\nimport send from 'koa-send'\nimport originalContext from 'koa/lib/context'\n\n/**\n * The app's context\n *\n * @extends {koa/lib/context}\n */\nexport default class Context {\n\n  constructor() {\n    this.params = Object.create(null)\n  }\n\n  /**\n   * The `app.config` delegation\n   *\n   * @returns {Config}\n   */\n  get config() {\n    return this.app.config\n  }\n\n  /**\n   * The `app.logger` delegation\n   *\n   * @example\n   *  ctx.logger.info('log somtehing')\n   *\n   * @returns {winston.Logger}\n   */\n  get logger() {\n    return this.app.logger\n  }\n\n  /**\n   * The `app.getService` delegation\n   *\n   * @example\n   *  let db = ctx.getService('sequelize')\n   *\n   * @returns {Mixed} service\n   */\n  getService(key) {\n    return this.app.getService(key)\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *  yield ctx.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {void}\n   */\n  *render(view, options = Object.create(null)) {\n    // merge ctx.state\n    options._state = this.state\n\n    this.body = yield this.app.render(view, options)\n  }\n\n  /**\n   * Transfer the file at the given `path`.\n   *\n   * Automatically sets the _Content-Type_ response header field.\n   * The callback `callback(err)` is invoked when the transfer is complete\n   * or when an error occurs. Be sure to check `res.sentHeader`\n   * if you wish to attempt responding, as the header and some data\n   * may have already been transferred.\n   *\n   * @example\n   *\n   * // The following example illustrates how `ctx.sendFile()` may\n   * // be used as an alternative for the `static()` middleware for\n   * // dynamic situations. The code backing `res.sendFile()` is actually\n   * // the same code, so HTTP cache support etc is identical.\n   *\n   *     app.get('/user/:uid/photos/:file', function*(next){\n   *       var uid = req.params.uid\n   *         , file = req.params.file\n   *\n   *       var yes = yield req.user.mayViewFilesFrom(uid)\n   *       if (yes) {\n   *         yield ctx.sendFile('/uploads/' + uid + '/' + file)\n   *       } else {\n   *         ctx.status = 403\n   *         ctx.body = 'Sorry! you cant see that.'\n   *       }\n   *     });\n   *\n   * @param {String} path The file path\n   * @param {Object} options\n   * @param {Number} options.maxAge Defaulting to 0 (can be string converted by `ms`)\n   * @param {String} options.root Directory for relative filenames\n   * @param {Object} options.headers Object of headers to serve with file\n   * @returns {void}\n   */\n  *sendFile(path, options = Object.create(null)) {\n    var opts = Object.create({\n      disposition: 'attachment'\n    })\n    Object.assign(opts, options)\n\n    if (opts.disposition) {\n      var filename = opts.filename || basename(path)\n      this.attachment(filename)\n    }\n\n    yield send(this, path, options)\n  }\n\n  /**\n   * Send JSON response\n   *\n   * @example\n   *     ctx.json(null);\n   *     ctx.json({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @returns {void}\n   */\n  json(obj) {\n    this.body = obj\n  }\n\n  /**\n   * Send JSON response with JSONP callback support.\n   *\n   * @example\n   *     ctx.jsonp(null);\n   *     ctx.jsonp({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @param {String} [Name='callback']\n   * @returns {void}\n   */\n  jsonp(obj, name = 'callback') {\n    var body = JSON.stringify(obj)\n    var callback = this.query[name]\n\n    // fixup callback\n    if (Array.isArray(callback)) {\n      callback = callback[0]\n    }\n\n    // jsonp\n    if (typeof callback === 'string' && callback.length !== 0) {\n\n      // restrict callback charset\n      callback = callback.replace(/[^\\[\\]\\w$.]/g, '')\n\n      // replace chars not allowed in JavaScript that are in JSON\n      body = body\n        .replace(/\\u2028/g, '\\\\u2028')\n        .replace(/\\u2029/g, '\\\\u2029')\n\n      // the /**/ is a specific security mitigation for \"Rosetta Flash JSONP abuse\"\n      // the typeof check is just to reduce client error noise\n      body = '/**/ typeof ' + callback + ' === \\'function\\' && ' + callback + '(' + body + ');'\n    }\n\n    if (!this.type) {\n      this.set('X-Content-Type-Options', 'nosniff')\n      this.type = 'js'\n    }\n    this.body = body\n  }\n\n  /**\n   * Check if the request was an `XMLHttpRequest`.\n   *\n   * @example\n   *  if (ctx.xhr) ctx.body = 'AJAX'\n   *\n   * @returns {Boolean}\n   */\n  get xhr() {\n    var val = this.get('X-Requested-With') || ''\n    return val.toLowerCase() === 'xmlhttprequest'\n  }\n\n}\n\n// Sets Context's prototype to originalContext `koa/context`.\nObject.setPrototypeOf(Context.prototype, originalContext)\n"
+    "content": "/*!\n * trek - Context\n * Copyright(c) 2015 Fangdun Cai\n * MIT Licensed\n */\n\nimport { basename } from 'path'\nimport send from 'koa-send'\nimport originalContext from 'koa/lib/context'\n\n/**\n * The app's context\n *\n * @extends {koa/lib/context}\n */\nexport default class Context {\n\n  constructor() {\n    this.params = Object.create(null)\n  }\n\n  /**\n   * The `app.config` delegation\n   *\n   * @example\n   *\n   *  ctx.config\n   *  // => app.config\n   *\n   * @returns {Config}\n   */\n  get config() {\n    return this.app.config\n  }\n\n  /**\n   * The `app.logger` delegation\n   *\n   * @example\n   *\n   *  ctx.logger.info('log somtehing')\n   *\n   * @returns {winston.Logger}\n   */\n  get logger() {\n    return this.app.logger\n  }\n\n  /**\n   * The `app.getService` delegation\n   *\n   * @example\n   *\n   *  let db = ctx.getService('sequelize')\n   *\n   * @returns {Mixed} service\n   */\n  getService(key) {\n    return this.app.getService(key)\n  }\n\n  /**\n   * Render `view` with the given `options`\n   *\n   * @example\n   *\n   *  yield ctx.render('site', { name: 'trek' })\n   *\n   * @param {String} view The name of view\n   * @param {Object} options\n   * @param {Boolean} options.cache Boolean hinting to the engine it should cache\n   * @param {String} options.filename Filename of the view being rendered\n   * @returns {void}\n   */\n  *render(view, options = Object.create(null)) {\n    // merge ctx.state\n    options._state = this.state\n\n    this.body = yield this.app.render(view, options)\n  }\n\n  /**\n   * Transfer the file at the given `path`.\n   *\n   * Automatically sets the _Content-Type_ response header field.\n   * When an error occurs. Be sure to check `res.sentHeader`\n   * if you wish to attempt responding, as the header and some data\n   * may have already been transferred.\n   *\n   * @example\n   *\n   *  // The following example illustrates how `ctx.sendFile()` may\n   *  // be used as an alternative for the `static()` middleware for\n   *  // dynamic situations. The code backing `res.sendFile()` is actually\n   *  // the same code, so HTTP cache support etc is identical.\n   *\n   *  app.get('/user/:uid/photos/:file', function* (next){\n   *    var uid = req.params.uid\n   *      , file = req.params.file\n   *\n   *    var yes = yield req.user.mayViewFilesFrom(uid)\n   *    if (yes) {\n   *      yield ctx.sendFile('/uploads/' + uid + '/' + file)\n   *    } else {\n   *      ctx.status = 403\n   *      ctx.body = 'Sorry! you cant see that.'\n   *    }\n   *  });\n   *\n   * @param {String} path The file path\n   * @param {Object} options\n   * @param {Number} options.maxAge Defaulting to 0 (can be string converted by `ms`)\n   * @param {String} options.root Directory for relative filenames\n   * @param {Object} options.headers Object of headers to serve with file\n   * @returns {void}\n   */\n  *sendFile(path, options = Object.create(null)) {\n    var opts = Object.create({\n      disposition: 'attachment'\n    })\n    Object.assign(opts, options)\n\n    if (opts.disposition) {\n      var filename = opts.filename || basename(path)\n      this.attachment(filename)\n    }\n\n    yield send(this, path, options)\n  }\n\n  /**\n   * Send JSON response\n   *\n   * @example\n   *\n   *     ctx.json(null);\n   *     ctx.json({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @returns {void}\n   */\n  json(obj) {\n    this.body = obj\n  }\n\n  /**\n   * Send JSON response with JSONP callback support.\n   *\n   * @example\n   *\n   *     ctx.jsonp(null);\n   *     ctx.jsonp({ user: 'tj' });\n   *\n   * @param {String|Number|Boolean|Object} obj\n   * @param {String} [Name='callback']\n   * @returns {void}\n   */\n  jsonp(obj, name = 'callback') {\n    var body = JSON.stringify(obj)\n    var callback = this.query[name]\n\n    // fixup callback\n    if (Array.isArray(callback)) {\n      callback = callback[0]\n    }\n\n    // jsonp\n    if (typeof callback === 'string' && callback.length !== 0) {\n\n      // restrict callback charset\n      callback = callback.replace(/[^\\[\\]\\w$.]/g, '')\n\n      // replace chars not allowed in JavaScript that are in JSON\n      body = body\n        .replace(/\\u2028/g, '\\\\u2028')\n        .replace(/\\u2029/g, '\\\\u2029')\n\n      // the /**/ is a specific security mitigation for \"Rosetta Flash JSONP abuse\"\n      // the typeof check is just to reduce client error noise\n      body = '/**/ typeof ' + callback + ' === \\'function\\' && ' + callback + '(' + body + ');'\n    }\n\n    if (!this.type) {\n      this.set('X-Content-Type-Options', 'nosniff')\n      this.type = 'js'\n    }\n    this.body = body\n  }\n\n  /**\n   * Check if the request was an `XMLHttpRequest`.\n   *\n   * @example\n   *\n   *  if (ctx.xhr) ctx.body = 'AJAX'\n   *\n   * @returns {Boolean}\n   */\n  get xhr() {\n    var val = this.get('X-Requested-With') || ''\n    return val.toLowerCase() === 'xmlhttprequest'\n  }\n\n}\n\n// Sets Context's prototype to originalContext `koa/context`.\nObject.setPrototypeOf(Context.prototype, originalContext)\n"
   },
   {
     "kind": "class",
@@ -617,7 +617,10 @@
     "longname": "src/Context.js~Context#config",
     "access": null,
     "description": "The `app.config` delegation",
-    "lineNumber": 27,
+    "examples": [
+      "\n ctx.config\n // => app.config"
+    ],
+    "lineNumber": 32,
     "unknown": [
       {
         "tagName": "@returns",
@@ -649,9 +652,9 @@
     "access": null,
     "description": "The `app.logger` delegation",
     "examples": [
-      " ctx.logger.info('log somtehing')"
+      "\n ctx.logger.info('log somtehing')"
     ],
-    "lineNumber": 39,
+    "lineNumber": 45,
     "unknown": [
       {
         "tagName": "@returns",
@@ -683,9 +686,9 @@
     "access": null,
     "description": "The `app.getService` delegation",
     "examples": [
-      " let db = ctx.getService('sequelize')"
+      "\n let db = ctx.getService('sequelize')"
     ],
-    "lineNumber": 51,
+    "lineNumber": 58,
     "unknown": [
       {
         "tagName": "@returns",
@@ -720,9 +723,9 @@
     "access": null,
     "description": "Render `view` with the given `options`",
     "examples": [
-      " yield ctx.render('site', { name: 'trek' })"
+      "\n yield ctx.render('site', { name: 'trek' })"
     ],
-    "lineNumber": 67,
+    "lineNumber": 75,
     "unknown": [
       {
         "tagName": "@returns",
@@ -790,7 +793,7 @@
     "longname": "src/Context.js~Context#body",
     "access": null,
     "description": null,
-    "lineNumber": 71,
+    "lineNumber": 79,
     "undocument": true,
     "type": {
       "types": [
@@ -806,11 +809,11 @@
     "memberof": "src/Context.js~Context",
     "longname": "src/Context.js~Context#sendFile",
     "access": null,
-    "description": "Transfer the file at the given `path`.\n\nAutomatically sets the _Content-Type_ response header field.\nThe callback `callback(err)` is invoked when the transfer is complete\nor when an error occurs. Be sure to check `res.sentHeader`\nif you wish to attempt responding, as the header and some data\nmay have already been transferred.",
+    "description": "Transfer the file at the given `path`.\n\nAutomatically sets the _Content-Type_ response header field.\nWhen an error occurs. Be sure to check `res.sentHeader`\nif you wish to attempt responding, as the header and some data\nmay have already been transferred.",
     "examples": [
-      "\n// The following example illustrates how `ctx.sendFile()` may\n// be used as an alternative for the `static()` middleware for\n// dynamic situations. The code backing `res.sendFile()` is actually\n// the same code, so HTTP cache support etc is identical.\n\n    app.get('/user/:uid/photos/:file', function*(next){\n      var uid = req.params.uid\n        , file = req.params.file\n\n      var yes = yield req.user.mayViewFilesFrom(uid)\n      if (yes) {\n        yield ctx.sendFile('/uploads/' + uid + '/' + file)\n      } else {\n        ctx.status = 403\n        ctx.body = 'Sorry! you cant see that.'\n      }\n    });"
+      "\n // The following example illustrates how `ctx.sendFile()` may\n // be used as an alternative for the `static()` middleware for\n // dynamic situations. The code backing `res.sendFile()` is actually\n // the same code, so HTTP cache support etc is identical.\n\n app.get('/user/:uid/photos/:file', function* (next){\n   var uid = req.params.uid\n     , file = req.params.file\n\n   var yes = yield req.user.mayViewFilesFrom(uid)\n   if (yes) {\n     yield ctx.sendFile('/uploads/' + uid + '/' + file)\n   } else {\n     ctx.status = 403\n     ctx.body = 'Sorry! you cant see that.'\n   }\n });"
     ],
-    "lineNumber": 110,
+    "lineNumber": 117,
     "unknown": [
       {
         "tagName": "@returns",
@@ -889,9 +892,9 @@
     "access": null,
     "description": "Send JSON response",
     "examples": [
-      "    ctx.json(null);\n    ctx.json({ user: 'tj' });"
+      "\n    ctx.json(null);\n    ctx.json({ user: 'tj' });"
     ],
-    "lineNumber": 134,
+    "lineNumber": 142,
     "unknown": [
       {
         "tagName": "@returns",
@@ -932,7 +935,7 @@
     "longname": "src/Context.js~Context#body",
     "access": null,
     "description": null,
-    "lineNumber": 135,
+    "lineNumber": 143,
     "undocument": true,
     "type": {
       "types": [
@@ -950,9 +953,9 @@
     "access": null,
     "description": "Send JSON response with JSONP callback support.",
     "examples": [
-      "    ctx.jsonp(null);\n    ctx.jsonp({ user: 'tj' });"
+      "\n    ctx.jsonp(null);\n    ctx.jsonp({ user: 'tj' });"
     ],
-    "lineNumber": 149,
+    "lineNumber": 158,
     "unknown": [
       {
         "tagName": "@returns",
@@ -1005,7 +1008,7 @@
     "longname": "src/Context.js~Context#type",
     "access": null,
     "description": null,
-    "lineNumber": 176,
+    "lineNumber": 185,
     "undocument": true,
     "type": {
       "types": [
@@ -1022,7 +1025,7 @@
     "longname": "src/Context.js~Context#body",
     "access": null,
     "description": null,
-    "lineNumber": 178,
+    "lineNumber": 187,
     "undocument": true,
     "type": {
       "types": [
@@ -1040,9 +1043,9 @@
     "access": null,
     "description": "Check if the request was an `XMLHttpRequest`.",
     "examples": [
-      " if (ctx.xhr) ctx.body = 'AJAX'"
+      "\n if (ctx.xhr) ctx.body = 'AJAX'"
     ],
-    "lineNumber": 189,
+    "lineNumber": 199,
     "unknown": [
       {
         "tagName": "@returns",
