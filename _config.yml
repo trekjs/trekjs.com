@@ -1,0 +1,20 @@
+title: Trek
+email: cfddream@gmail.com
+description: 'Next generation full-stack JavaScript open source solution, based on Koa'
+baseurl: 'http://trekjs.com'
+repository_url: 'https://github.com/trekjs/trek'
+twitter_username: _fundon
+github_username: trekjs
+highlighter: pygments
+markdown: redcarpet
+redcarpet:
+    extensions: [with_toc_data]
+gems:
+    - jekyll-redirect-from
+latest_version: v0.2.1
+available_versions:
+    - v0.2.1
+collections:
+    docs: {output: true, permalink: '/docs/:path/'}
+defaults:
+    - {scope: {type: docs}, values: {layout: docs}}
