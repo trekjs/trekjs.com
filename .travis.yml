@@ -6,11 +6,11 @@ notifications:
     on_failure: change
 
 node_js:
-  - 0.10
+  - 4
 
 env:
   global:
-    - ATOM_ACCESS_TOKEN=da809a6077bb1b0aa7c5623f7b2d5f1fec2faae4
+    - TREK_ACCESS_TOKEN=e6bc4ce40ccbf2bd7bdc305e08416a2efa77e777
 
 branches:
   only:
