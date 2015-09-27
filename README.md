@@ -1,6 +1,6 @@
 # trekjs.com
 
-The [website](http://trekjs.com) for [Trek](https://github.com/trekjs/trek). 
+The [website](http://trekjs.com) for [Trek](https://github.com/trekjs/trek).  
 **NOTE**: The Source code forks from [electron.atom.io](http://electron.atom.io/), thanks to Electron Team.
 
 ### Build
