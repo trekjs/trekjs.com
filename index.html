@@ -16,25 +16,58 @@ layout: default
     <div class='container'>
       <div class='row'>
         <div class='four columns'>
-          <img src='../images/browser.png' width='150px'>
-          <h4>Web Tech</h4>
-          <p>Use HTML, CSS, and JavaScript with Chromium and Node.js to build your app.</p>
+          <h4>ES6/ES7</h4>
+          <p>Use next generation JavaScript, today. Powered by <a href="https://babeljs.io/">Babel</a>.</p>
         </div>
         <div class='four columns'>
-          <img src='../images/fork.png' width='99px'>
+          <h4>Features</h4>
+          <ul>
+            <li>Loads environment variables(.env) and configurations(js|json|toml|yml) automagically</li>
+            <li>Fast HTTP router which smartly prioritize routes.</li>
+            <li>RESTful Routing, Rails Style.</li>
+          <ul>
+        </div>
+        <div class='four columns'>
           <h4>Open Source</h4>
-          <p>Electron is open source; maintained by GitHub and an active community.</p>
-        </div>
-        <div class='four columns'>
-          <img src='../images/os-box.png' width='150px'>
-          <h4>Cross Platform</h4>
-          <p>Electron apps build and run on Mac, Windows, and Linux.</p>
+          <p>Based on <a href="http://koajs.com/">Koa</a>.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="more-features">
+  <section id='get-started' class='get-started'>
+    <div class='container'>
+      <div class='row'>
+        <div class='twelve columns'>
+          <h3>Get started with Trek</h3>
+        </div>
+        <div class='row'>
+          <div class='ten columns offset-by-one'>
+            <h5>Use <a href='https://www.npmjs.com/'>npm</a> to install from the command line, then check out the <a href="">Quick Start Guide</a>. Read the <a href="/docs/latest">documentation</a>.</h5>
+          </div>
+        </div>
+        <div class='row'>
+          <div class='six columns offset-by-three'>
+            <pre><code>
+# Install the `trek-cli` command globally
+npm install trek-cli -g
+
+# Create a trek app and chdir
+trek new app && cd app
+
+# Install as a development dependency
+npm install
+
+# Start trek app
+npm start
+            </code></pre>
+          </div>
+        </div>
+        </div>
+    </div>
+  </section>
+
+  <!--section class="more-features">
     <div class='container'>
       <div class='row'>
         <div class='twelve columns'>
@@ -43,7 +76,7 @@ layout: default
       </div>
 
       <div class='row features'>
-        <!--div class='two columns offset-by-one'>
+        <div class='two columns offset-by-one'>
           <span class="mega-octicon octicon-squirrel"></span>
           <br/>
           Automatic updates
@@ -68,11 +101,11 @@ layout: default
           <br/>
           Native menus &amp; notifications
         </div>
-      </div-->
+      </div>
     </div>
-  </section>
+  </section-->
 
-  <section id='built-on-trek' class='built-on'>
+  <!--section id='built-on-trek' class='built-on'>
     <div class='container'>
       <div class='row'>
         <div class='ten columns offset-by-one'>
@@ -108,34 +141,5 @@ layout: default
         </div>
       </div>
     </div>
-  </section>
+  </section-->
 
-  <section id='get-started' class='get-started'>
-    <div class='container'>
-      <div class='row'>
-        <div class='twelve columns'>
-          <h3>Get started with Trek</h3>
-        </div>
-        <div class='row'>
-          <div class='ten columns offset-by-one'>
-            <h5>Use <a href='https://www.npmjs.com/'>npm</a> to install from the command line, then check out the <a href="">Quick Start Guide</a>. Read the <a href="/docs/latest">documentation</a>.</h5>
-          </div>
-        </div>
-        <div class='row'>
-          <div class='six columns offset-by-three'>
-            <pre><code>
-# Install the `trek-cli` command globally
-npm install trek-cli -g
-
-# Create a trek app
-trek new app
-
-# Install as a development dependency
-cd app
-npm install
-            </code></pre>
-          </div>
-        </div>
-        </div>
-    </div>
-  </section>

@@ -47,8 +47,7 @@ pre, code {
 }
 
 pre code {
-  /*color: #FFCC00;*/
-  color: #f4d53c;
+  color: #FFCC00;
   border: none;
   background-color: black;
   overflow-x: scroll;
