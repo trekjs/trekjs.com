@@ -6,6 +6,7 @@ repository_url: 'https://github.com/trekjs/trek'
 twitter_username: _fundon
 github_username: trekjs
 highlighter: pygments
+google_analytics: 'UA-68141133-1'
 markdown: redcarpet
 redcarpet:
     extensions: [with_toc_data]
