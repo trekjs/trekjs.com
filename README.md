@@ -1,6 +1,7 @@
-# electron.atom.io
+# trekjs.com
 
-The [website](http://electron.atom.io) for [Electron](https://github.com/atom/electron) (formerly known as Atom-Shell).
+The [website](http://trekjs.com) for [Trek](https://github.com/trekjs/trek).
+**NOTE**: The Source code clone from [electron.atom.io](http://electron.atom.io/), thanks them.
 
 ### Build
 
@@ -9,7 +10,7 @@ This is a [Jekyll](http://jekyllrb.com) site hosted on [GitHub Pages](http://pag
 Follow these steps to copy this repository to your computer and build the site:
 
 ```bash
-$ git clone https://github.com/atom/electron.atom.io.git
+$ git clone https://github.com/trekjs/trekjs.com
 $ cd electron.atom.io
 $ script/bootstrap
 $ script/server
@@ -17,10 +18,10 @@ $ script/server
 
 #### Documentation
 
-Documentation is added to the site directly from the `atom/electron` repository's `docs` directory. This is done with [Node.js](http://www.nodejs.org/download) so you'll need that on your system and to install the dependencies used here.
+Documentation is added to the site directly from the `trekjs/trek` repository's `docs` directory. This is done with [Node.js](http://www.nodejs.org/download) so you'll need that on your system and to install the dependencies used here.
 
 ```bash
-$ cd electron.atom.io
+$ cd trekjs.com
 $ npm install
 ```
 
@@ -48,7 +49,7 @@ $ npm test
 
 #### Release Notes
 
-The most recent release notes from the `atom/electron` repository are made available on the site and can be updated by running:
+The most recent release notes from the `trekjs/trek` repository are made available on the site and can be updated by running:
 
 ```bash
 $ script/releases
