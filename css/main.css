@@ -3,9 +3,8 @@
 
 body {
   font-family: "Helvetica Neue", "Arial", sans-serif;
-  color: #45828E;
-  background-color: white;
-  /* background-color: #FFCC00; */
+  color: #666;
+  background-color: #F3F3F4;
 }
 
 h1, h2, h3, h4 {
@@ -13,12 +12,12 @@ h1, h2, h3, h4 {
 }
 
 a {
- color: #39AEC6;
+ color: #FF9900;
  text-decoration: none;
 }
 
 a:hover {
-  color: #39AEC6;
+  color: #FF7700;
   text-decoration: underline;
 }
 
@@ -47,9 +46,9 @@ pre, code {
 }
 
 pre code {
-  color: #C5F3FC;
+  color: #FFCC00;
   border: none;
-  background-color: #076274;
+  background-color: black;
   overflow-x: scroll;
 }
 
@@ -91,8 +90,9 @@ section {
 
 header {
   padding: 12px 0;
-  /* background-color: #FFCC00; */
-  background-color: #323331;
+  background-color: #f8f8f8;
+  box-shadow: 2px 5px 20px -12px rgba(0, 0, 0, 0.5);
+  border-color: #e7e7e7;
 }
 @media (max-width: 550px) {
   header,
@@ -102,11 +102,12 @@ header {
 }
 
 header a {
-  color: #FAF7F3;
+  /*color: #666;*/
+  font-weight: bold;
 }
 
 header a:hover {
-  color: #FAF7F3;
+  /*color: #999;*/
 }
 
 /* Hero */
@@ -140,7 +141,6 @@ header a:hover {
 /* More Features */
 
 .more-features {
-  background-color: #FFdd00;
 }
 
 .more-features .features {
@@ -175,7 +175,6 @@ header a:hover {
 /* Built With */
 
 .built-on {
-  background-color: #FAF7F3;
 }
 
 .built-on li {
@@ -200,7 +199,6 @@ header a:hover {
 
 footer {
   padding: 15px 0;
-  background-color: #FAF7F3;
 }
 @media (max-width: 550px) {
   footer,
@@ -208,6 +206,7 @@ footer {
     text-align: center;
   }
 }
+
 
 /* Releases
    ------------------------------------------ */
