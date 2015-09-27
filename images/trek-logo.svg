@@ -4,14 +4,17 @@
     <title>Trek</title>
     <desc>Created with Sketch.</desc>
     <defs>
-        <polygon id="path-1" points="60.4168307 87.589644 48.2971036 106.550511 50.1830888 88.8267949 32 80.1105083 50.1830894 69.5348446 60.41683 13.449489 67.1512741 68.2538128 88 79.6724034 69.8577116 88.8267949 71.7689418 106.550511 "></polygon>
+        <polygon id="path-1" points="60.4168307 84.589644 48.2971036 103.550511 50.1830888 85.8267949 32 77.1105083 50.1830894 66.5348446 60.41683 10.449489 67.1512741 65.2538128 88 76.6724034 69.8577116 85.8267949 71.7689418 103.550511 "></polygon>
     </defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
         <g id="Trek" sketch:type="MSLayerGroup">
-            <polygon id="Polygon-4" stroke="#FFCC00" stroke-width="4" stroke-linecap="square" fill="#FFFFFF" sketch:type="MSShapeGroup" points="60 4.57437416 108 32.2871871 108 87.7128129 60 115.425626 12 87.7128129 12 32.2871871 "></polygon>
-            <g id="Star-1">
-                <use fill="#FFCC00" fill-rule="evenodd" sketch:type="MSShapeGroup" xlink:href="#path-1"></use>
-                <use fill="none" xlink:href="#path-1"></use>
+            <g>
+                <rect id="Rectangle-1" sketch:type="MSShapeGroup" x="0" y="0" width="120" height="120"></rect>
+                <polygon id="Polygon-4" stroke="#FFCC00" stroke-width="4" stroke-linecap="square" fill="#FFFFFF" sketch:type="MSShapeGroup" points="60 4.57437416 108 32.2871871 108 87.7128129 60 115.425626 12 87.7128129 12 32.2871871 "></polygon>
+                <g id="Star-1">
+                    <use fill="#FFCC00" fill-rule="evenodd" sketch:type="MSShapeGroup" xlink:href="#path-1"></use>
+                    <use fill="none" xlink:href="#path-1"></use>
+                </g>
             </g>
         </g>
     </g>
