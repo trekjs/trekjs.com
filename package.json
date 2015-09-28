@@ -1,6 +1,7 @@
 {
   "name": "trekjs.com",
   "version": "1.0.0",
+  "private": true,
   "description": "The [website](http://trekjs.com) for [Trek](https://github.com/trekjs/trek).",
   "repository": {
     "type": "git",
