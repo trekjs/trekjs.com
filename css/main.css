@@ -257,7 +257,13 @@ footer {
     margin: 0 2rem 0 0;
   }
 }
-.jump-to-release .electron-icon {
+
+.trek-icon {
+  width: 90px;
+  height: 90px;
+}
+
+.jump-to-release .trek-icon {
   height: 1.5em;
   margin-right: 0.4em;
   margin-top: -0.4em;
