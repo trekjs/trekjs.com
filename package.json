@@ -9,5 +9,11 @@
   },
   "repository": "trekjs/trekjs.com",
   "author": "Fangdun Cai <cfddream@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "rollup": "^0.34.12",
+    "rollup-plugin-buble": "^0.13.0",
+    "rollup-plugin-commonjs": "^4.0.1",
+    "rollup-plugin-node-resolve": "^2.0.0"
+  }
 }
