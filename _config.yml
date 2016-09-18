@@ -1,0 +1,17 @@
+title: Trek.js
+email: cfddream@gmail.com
+description: 'Fast Async Web Framework For Modern Node.js'
+url: 'https://trekjs.com'
+twitter_username: _fundon
+github_username:  fundon
+future: true
+excerpt_separator: '---'
+gems:
+  - jekyll-redirect-from
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jemoji
+sass:
+  style: compressed
+logo: trek-logo.svg
