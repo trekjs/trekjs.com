@@ -1,0 +1,47 @@
+<section class="hero is-medium">
+  <div class="hero-head">
+    <div class="container">
+      <nav class="nav">
+        <div class="nav-left">
+          <a class="nav-item is-brand" href="/">
+            <img src="{{ site.logo }}" alt="{{ site.title }}: {{ site.description }}">
+          </a>
+          <a class="nav-item" href="/docs">Documentation</a>
+        </div>
+
+        <div class="nav-center">
+        </div>
+
+        <span id="nav-toggle" class="nav-toggle">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+
+        <div id="nav-menu" class="nav-right nav-menu">
+        </div>
+      </nav>
+
+    </div>
+  </div>
+
+  {% if page.url == '/' %}
+
+  <div class="hero-body">
+    <div class="container">
+      <div class="jumbotron has-text-centered">
+        <h2 class="title">Fast Async Web Framework For Modern Node.js</h2>
+        <p class="subtitle">Get going with the high-performance asynchronous programs</p>
+        <a href="/docs" class="button is-light is-outlined is-medium">Get Started</a>&nbsp;&nbsp;&nbsp;&nbsp;
+        <a href="/docs" class="button is-light is-outlined is-medium">Documentation</a>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <div class="hero-foot">
+    <div class="container">
+    </div>
+
+  </section>

@@ -1,0 +1,16 @@
+{
+  "name": "trekjs.github.io",
+  "version": "0.0.0",
+  "private": true,
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "trekjs/trekjs.github.io.git",
+  "keywords": [],
+  "author": "Fangdun Cai <cfddream@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bulma": "0.1.2"
+  }
+}

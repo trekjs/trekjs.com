@@ -3,7 +3,7 @@ email: cfddream@gmail.com
 description: 'Fast Async Web Framework For Modern Node.js'
 url: 'https://trekjs.com'
 twitter_username: _fundon
-github_username:  fundon
+github_username:  trekjs
 future: true
 excerpt_separator: '---'
 gems:
@@ -14,4 +14,20 @@ gems:
   - jemoji
 sass:
   style: compressed
-logo: trek-logo.svg
+collections:
+  docs: {output: true, permalink: '/docs/:path/'}
+defaults:
+  - {scope: {type: docs}, values: {layout: docs}}
+  - {scope: {type: posts}, values: {layout: post, permalink: '/blog/:year/:month/:day/:title'}}
+  - {scope: {path: ""}, values: {image: {path: /images/trek-logo.svg, width: 1200, height: 630}}}
+exclude:
+  - node_modules
+  - README.md
+  - CNAME
+  - Gemfile
+  - Gemfile.lock
+  - package.json
+include:
+  - _pages
+  - node_modules/bulma/sass
+logo: /images/trek-logo.svg
