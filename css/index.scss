@@ -4,10 +4,10 @@
 @charset "utf-8";
 
 // Variables
-$nav-height: 80px;
+//@import "variables";
 
 // Bulma
-@import "../node_modules/bulma/bulma.sass";
+@import "bulma";
 
 // Header
 .hero {
