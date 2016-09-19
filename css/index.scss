@@ -4,35 +4,46 @@
 @charset "utf-8";
 
 // Variables
-//@import "variables";
+@import "variables";
 
 // Bulma
 @import "bulma";
 
 // Header
 .hero {
-  background-color: #FFCC00;
+  background-color: rgba(255, 204, 0, 0.625); // #FFCC00
 
   > .container {
     max-width: 1100px;
+  }
+
+  .nav {
+    box-shadow: none;
   }
 
   .is-brand img {
     max-height: 60px;
   }
 
-  .nav-item a, a.nav-item {
-    color: #FFF;
-  }
-
   .jumbotron {
     .title {
-      color: #FFF;
       font-weight: $weight-title-bold;
     }
     .subtitle {
-      color: rgba(255,255,255,0.7);
-      font-weight: 400;
+      font-weight: $weight-title-normal;
+    }
+  }
+}
+
+.features {
+  .column {
+    padding: 40px 10px;
+  }
+
+  .title {
+    .icon {
+      color: #FFCC00;
+      margin-right: 20px;
     }
   }
 }
