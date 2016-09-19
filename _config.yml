@@ -29,5 +29,6 @@ exclude:
   - package.json
 include:
   - _pages
+  - node_modules/bulma/bulma.sass
   - node_modules/bulma/sass
 logo: /images/trek-logo.svg
