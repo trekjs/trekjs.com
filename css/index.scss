@@ -47,3 +47,14 @@
     }
   }
 }
+
+.sidebar {
+  .menu-list {
+    a {
+      &:hover {
+        background-color: transparent;
+        color: #FFCC00;
+      }
+    }
+  }
+}
