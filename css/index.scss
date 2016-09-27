@@ -11,7 +11,7 @@
 
 // Header
 .hero {
-  background-color: rgba(255, 204, 0, 0.625); // #FFCC00
+  background-color: #f8dc3c; //rgba(255, 204, 0, 0.625); // #FFCC00
 
   > .container {
     max-width: 1100px;
@@ -30,7 +30,11 @@
       font-weight: $weight-title-bold;
     }
     .subtitle {
+      color: rgba(0,0,0,.8);
       font-weight: $weight-title-normal;
+    }
+    .button {
+      border-color: rgba(0,0,0,.8);
     }
   }
 }
@@ -42,9 +46,12 @@
 
   .title {
     .icon {
-      color: #FFCC00;
+      color: #f8dc3c;
       margin-right: 20px;
     }
+  }
+  .title + .subtitle {
+    margin-top: 0;
   }
 }
 
@@ -53,7 +60,7 @@
     a {
       &:hover {
         background-color: transparent;
-        color: #FFCC00;
+        color: #f8dc3c;
       }
     }
   }
